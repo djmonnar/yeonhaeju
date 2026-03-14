@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>연해주 매출 대시보드 사용 설명서</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&family=Noto+Sans+KR:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e0e0c;
+  --surface: #161614;
+  --surface2: #1e1e1b;
+  --surface3: #272724;
+  --border: #2e2e28;
+  --gold: #c9a84c;
+  --gold-light: #e8c97a;
+  --gold-dim: #6b5a28;
+  --text: #e8e4d8;
+  --text-dim: #8a8578;
+  --text-muted: #4a4840;
+  --red: #e05c4b;
+  --green: #6ab187;
+  --blue: #5b9bd5;
+  --sake: #a855c8;
+  --radius: 14px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 300;
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+/* BG GLOW */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 40% at 50% 0%, rgba(201,168,76,.06) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ── HERO ── */
+.hero {
+  position: relative; z-index: 1;
+  padding: 60px 24px 40px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.hero-badge {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  border: 1px solid var(--gold-dim);
+  border-radius: 20px;
+  padding: 4px 14px;
+  margin-bottom: 20px;
+}
+.hero-title {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--gold);
+  letter-spacing: .08em;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.hero-sub {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 28px;
+  line-height: 1.8;
+}
+.hero-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(201,168,76,.08);
+  border: 1px solid var(--gold-dim);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 13px;
+  color: var(--gold-light);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: .05em;
+}
+
+/* ── TOC ── */
+.toc {
+  position: relative; z-index: 1;
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.toc-title {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: .25em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.toc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.toc-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  transition: all .2s;
+}
+.toc-item:hover, .toc-item:active {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  background: var(--surface2);
+}
+.toc-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--gold-dim);
+  background: rgba(201,168,76,.08);
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+/* ── MAIN ── */
+.content {
+  position: relative; z-index: 1;
+  padding: 0 0 60px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* ── SECTION ── */
+.section {
+  padding: 32px 24px 0;
+}
+.section-anchor { display: block; height: 0; }
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.section-icon {
+  font-size: 26px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.section-meta { flex: 1; }
+.section-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--gold-dim);
+  letter-spacing: .2em;
+  margin-bottom: 4px;
+}
+.section-title {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--text);
+  letter-spacing: .04em;
+  line-height: 1.3;
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 10px;
+}
+.card-label {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-label::before {
+  content: '';
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--gold-dim);
+  flex-shrink: 0;
+}
+
+/* ── STEPS ── */
+.steps { display: flex; flex-direction: column; gap: 10px; }
+.step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.step-num {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: rgba(201,168,76,.12);
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.step-body { flex: 1; }
+.step-title {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 400;
+  margin-bottom: 3px;
+}
+.step-desc {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ── HIGHLIGHT BOX ── */
+.highlight {
+  background: rgba(201,168,76,.06);
+  border: 1px solid var(--gold-dim);
+  border-left: 3px solid var(--gold);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 10px 0;
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+.highlight strong { color: var(--gold-light); font-weight: 500; }
+.highlight.green {
+  background: rgba(106,177,135,.06);
+  border-color: var(--green);
+  border-left-color: var(--green);
+}
+.highlight.green strong { color: var(--green); }
+.highlight.red {
+  background: rgba(224,92,75,.06);
+  border-color: var(--red);
+  border-left-color: var(--red);
+}
+.highlight.red strong { color: var(--red); }
+.highlight.sake {
+  background: rgba(168,85,200,.06);
+  border-color: var(--sake);
+  border-left-color: var(--sake);
+}
+.highlight.sake strong { color: var(--sake); }
+
+/* ── FEATURE GRID ── */
+.feature-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 10px 0;
+}
+.feature-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 12px;
+  text-align: center;
+}
+.feature-icon { font-size: 22px; margin-bottom: 6px; }
+.feature-name { font-size: 12px; color: var(--text); font-weight: 400; margin-bottom: 3px; }
+.feature-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+
+/* ── NAV CHIPS ── */
+.nav-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 10px 0;
+}
+.chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 13px;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: 'DM Mono', monospace;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.chip.active { border-color: var(--gold-dim); color: var(--gold); background: rgba(201,168,76,.08); }
+
+/* ── COMPARE TABLE ── */
+.compare {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  font-size: 13px;
+}
+.compare th {
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-weight: 400;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .1em;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.compare td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+  vertical-align: top;
+  line-height: 1.5;
+}
+.compare td:first-child { color: var(--text); font-weight: 400; }
+.compare tr:last-child td { border-bottom: none; }
+.good { color: var(--green) !important; }
+.bad { color: var(--red) !important; }
+
+/* ── TIP BOX ── */
+.tip {
+  display: flex;
+  gap: 10px;
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  align-items: flex-start;
+}
+.tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── DIVIDER ── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 32px 24px 0;
+}
+
+/* ── FOOTER ── */
+.footer {
+  position: relative; z-index: 1;
+  text-align: center;
+  padding: 40px 24px;
+  border-top: 1px solid var(--border);
+  margin-top: 32px;
+}
+.footer-logo {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 22px;
+  color: var(--gold);
+  letter-spacing: .1em;
+  margin-bottom: 8px;
+}
+.footer-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+/* ── INLINE CODE ── */
+code {
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 7px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--gold-light);
+}
+
+/* ── SCROLL TOP ── */
+.scroll-top {
+  position: fixed;
+  bottom: 24px; right: 20px;
+  z-index: 99;
+  background: var(--gold-dim);
+  border: none;
+  border-radius: 50%;
+  width: 42px; height: 42px;
+  color: #0c0c0a;
+  font-size: 18px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+.scroll-top.show { display: flex; }
+
+@media (min-width: 480px) {
+  .hero { padding: 80px 32px 48px; }
+  .hero-title { font-size: 32px; }
+  .toc, .section { padding-left: 32px; padding-right: 32px; }
+  .divider { margin-left: 32px; margin-right: 32px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">User Guide · 연해주</div>
+  <h1 class="hero-title">매출 대시보드<br>사용 설명서</h1>
+  <p class="hero-sub">
+    스마트폰으로 매출을 기록하고<br>
+    언제 어디서나 확인하는 방법을 안내합니다
+  </p>
+  <div class="hero-highlight">
+    🔗 북마크 해두시면 편리하게 사용하실 수 있습니다
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <div class="toc-title">목차</div>
+  <div class="toc-grid">
+    <a href="#s1" class="toc-item"><span class="toc-num">01</span>앱 열기</a>
+    <a href="#s2" class="toc-item"><span class="toc-num">02</span>매출 입력</a>
+    <a href="#s3" class="toc-item"><span class="toc-num">03</span>달력 조회</a>
+    <a href="#s4" class="toc-item"><span class="toc-num">04</span>통계 보기</a>
+    <a href="#s5" class="toc-item"><span class="toc-num">05</span>사케 관리</a>
+    <a href="#s6" class="toc-item"><span class="toc-num">06</span>실시간 동기화</a>
+    <a href="#s7" class="toc-item"><span class="toc-num">07</span>이 앱의 장점</a>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ── 01 앱 열기 ── -->
+<span class="section-anchor" id="s1"></span>
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon">📱</div>
+    <div class="section-meta">
+      <div class="section-num">01 · GETTING STARTED</div>
+      <div class="section-title">앱 열기 / 기본 화면</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">앱 접속 방법</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">링크 접속</div>
+          <div class="step-desc">담당자에게 받은 링크를 스마트폰 브라우저에서 열어주세요. 크롬(Chrome) 또는 사파리(Safari) 모두 가능합니다.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">홈 화면에 추가 (권장)</div>
+          <div class="step-desc">브라우저 메뉴 → <strong style="color:var(--gold-light)">홈 화면에 추가</strong>를 누르면 앱처럼 바탕화면에 아이콘이 생깁니다. 다음부터는 아이콘만 누르면 바로 열립니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">화면 구성</div>
+    <div class="nav-chips">
+      <span class="chip active">◈ 홈</span>
+      <span class="chip">◉ 통계</span>
+      <span class="chip">◇ 달력</span>
+      <span class="chip">✦ 입력</span>
+      <span class="chip">🍶 사케</span>
+      <span class="chip">≡ 더보기</span>
+    </div>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:8px;line-height:1.7">
+      화면 하단에 6개 탭이 있습니다. 원하는 탭을 터치해서 이동하세요.
+    </p>
+  </div>
+
+  <div class="highlight green">
+    <strong>💡 테마 변경</strong><br>
+    화면 우측 상단 <code>☀ 라이트</code> 버튼을 누르면 밝은 화면으로 바꿀 수 있습니다. 다시 누르면 어두운 화면으로 돌아옵니다.
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── 02 매출 입력 ── -->
+<span class="section-anchor" id="s2"></span>
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon">✦</div>
+    <div class="section-meta">
+      <div class="section-num">02 · DAILY ENTRY</div>
+      <div class="section-title">매출 입력 방법</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">입력 순서</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">하단 <code>✦ 입력</code> 탭 터치</div>
+          <div class="step-desc">날짜는 자동으로 오늘 날짜가 들어갑니다. 다른 날짜를 입력할 때는 날짜를 직접 바꿔주세요.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">총 매출 입력</div>
+          <div class="step-desc">그날의 총 매출 금액을 입력합니다. 월 누적 금액도 함께 입력해 주세요.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">결제수단별 입력</div>
+          <div class="step-desc">카드, 계좌이체, 제로페이, 현금을 각각 입력합니다.<br>합계가 총 매출과 다르면 <strong style="color:var(--red)">빨간 경고</strong>와 차액이 표시되니 확인해주세요.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">층별 / 시간대 입력 (자동 계산)</div>
+          <div class="step-desc">1층이나 2층 중 한 쪽만 입력하면 나머지가 자동으로 계산됩니다. 점심/저녁도 마찬가지입니다.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">선결제 · 사케 · 메모 입력</div>
+          <div class="step-desc">선결제가 있으면 마이너스 금액으로 입력합니다 (예: <code>-158000</code>). 판매한 사케는 목록에서 선택 후 수량 입력. 특이사항은 메모란에 자유롭게 작성하세요.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-title"><code>✦ 저장하기</code> 버튼 터치</div>
+          <div class="step-desc">저장되면 자동으로 다음 날짜로 넘어갑니다. 상단에 <strong style="color:var(--green)">동기화됨</strong> 표시가 나타나면 저장 완료입니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight red">
+    <strong>⚠ 결제수단 차액 알림</strong><br>
+    카드 + 계좌이체 + 제로페이 + 현금의 합계가 총 매출과 다를 경우, 입력 도중 빨간 경고창이 나타납니다. 차액도 함께 표시되니 잘못 입력한 항목을 바로 확인할 수 있습니다.
+  </div>
+
+  <div class="tip">
+    <span class="tip-icon">💡</span>
+    <span>이미 입력한 날짜를 수정하려면, 달력에서 해당 날짜를 터치한 뒤 <strong style="color:var(--gold-light)">수정하기 →</strong>를 누르면 됩니다.</span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── 03 달력 조회 ── -->
+<span class="section-anchor" id="s3"></span>
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon">◇</div>
+    <div class="section-meta">
+      <div class="section-num">03 · CALENDAR VIEW</div>
+      <div class="section-title">달력으로 조회하는 법</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">특정 날짜 조회</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">하단 <code>◇ 달력</code> 탭 터치</div>
+          <div class="step-desc">매출이 입력된 날짜는 숫자 아래에 <strong style="color:var(--gold)">금색 점</strong>이 표시됩니다.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">날짜 터치</div>
+          <div class="step-desc">날짜를 터치하면 아래에 해당 날의 매출 상세 내역이 바로 펼쳐집니다. 총매출, 카드, 점심/저녁, 사케 등을 한눈에 확인할 수 있습니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">기간 합계 조회 (특정일 ~ 특정일)</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">시작 날짜 터치</div>
+          <div class="step-desc">조회하고 싶은 기간의 첫 번째 날짜를 터치합니다. 날짜가 <strong style="color:var(--gold)">금색</strong>으로 선택됩니다.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">종료 날짜 터치</div>
+          <div class="step-desc">두 번째 날짜를 터치하면 기간이 선택되고, 두 날짜 사이가 <strong style="color:var(--gold)">연한 금색</strong>으로 표시됩니다.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">기간 합계 확인</div>
+          <div class="step-desc">달력 아래에 선택 기간의 총 매출, 일 평균, 카드, 점심/저녁, 사케 판매량이 자동으로 계산되어 표시됩니다.</div>
+        </div>
+      </div>
+    </div>
+    <div class="tip" style="margin-top:12px">
+      <span class="tip-icon">✕</span>
+      <span>기간 선택을 취소하려면 날짜 옆의 <code>✕</code> 버튼을 누르세요.</span>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── 04 통계 ── -->
+<span class="section-anchor" id="s4"></span>
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon">◉</div>
+    <div class="section-meta">
+      <div class="section-num">04 · STATISTICS</div>
+      <div class="section-title">통계 보는 법</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">4가지 기간 단위</div>
+    <div class="feature-grid">
+      <div class="feature-item">
+        <div class="feature-icon">📅</div>
+        <div class="feature-name">일별</div>
+        <div class="feature-desc">특정 날짜 하루 상세 + 전년 동일일 비교</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">📆</div>
+        <div class="feature-name">주별</div>
+        <div class="feature-desc">한 주 합계 + 요일별 매출 바 차트</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">🗓</div>
+        <div class="feature-name">월별</div>
+        <div class="feature-desc">한 달 합계 + 전년 동월 비교 + 일별 차트</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">📊</div>
+        <div class="feature-name">연별</div>
+        <div class="feature-desc">연간 총 매출 + 전년 비교 + 월별 차트</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">사용 방법</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">하단 <code>◉ 통계</code> 탭 터치</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">일 / 주 / 월 / 연 탭 선택</div>
+          <div class="step-desc">보고 싶은 기간 단위를 선택합니다.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">날짜 또는 월 선택</div>
+          <div class="step-desc">달력 아이콘을 눌러 원하는 날짜/월/연도를 선택하면 해당 기간 통계가 바로 표시됩니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight">
+    <strong>📈 전년 비교</strong><br>
+    월별·연별 통계에는 전년도 같은 기간과 자동으로 비교해 <strong style="color:var(--green)">▲상승</strong> 또는 <strong style="color:var(--red)">▼하락</strong> 퍼센트가 표시됩니다.
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── 05 사케 관리 ── -->
+<span class="section-anchor" id="s5"></span>
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon">🍶</div>
+    <div class="section-meta">
+      <div class="section-num">05 · SAKE MANAGEMENT</div>
+      <div class="section-title">사케 관리 방법</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">사케 품목 등록</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">하단 <code>🍶 사케</code> 탭 터치</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">우측 상단 <code>+ 등록</code> 버튼 터치</div>
+          <div class="step-desc">이름, 종류, 용량, 초기 재고 수량을 입력합니다.<br>알림 기준 재고를 설정하면 재고가 그 이하로 떨어질 때 빨간색으로 표시됩니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">재고 수정</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">해당 사케의 <code>✎</code> 버튼 터치</div>
+          <div class="step-desc">납품이 들어왔거나 재고를 직접 조정할 때 사용합니다.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">현재 수량 입력 후 저장</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">매출 입력 시 판매 기록</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">입력 탭 → 사케 판매 기록 섹션</div>
+          <div class="step-desc">등록된 사케 목록이 드롭다운으로 표시됩니다. 선택 후 판매 수량을 입력합니다.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">여러 종류 판매 시</div>
+          <div class="step-desc"><code>+ 사케 추가</code> 버튼으로 항목을 늘려서 입력할 수 있습니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight sake">
+    <strong>📊 자동 통계</strong><br>
+    사케 탭 하단에 이달 품목별 판매량과 월별 판매 추이가 자동으로 차트로 표시됩니다.
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── 06 동기화 ── -->
+<span class="section-anchor" id="s6"></span>
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon">🔄</div>
+    <div class="section-meta">
+      <div class="section-num">06 · FIREBASE SYNC</div>
+      <div class="section-title">실시간 동기화</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">동기화 상태 확인</div>
+    <div class="feature-grid">
+      <div class="feature-item">
+        <div class="feature-icon" style="color:var(--green)">●</div>
+        <div class="feature-name">동기화됨</div>
+        <div class="feature-desc">정상. 데이터가 저장되어 있습니다.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon" style="color:var(--gold)">●</div>
+        <div class="feature-name">저장 중</div>
+        <div class="feature-desc">잠시 기다려 주세요.</div>
+      </div>
+      <div class="feature-item" style="grid-column: 1/-1;">
+        <div class="feature-icon" style="color:var(--red)">●</div>
+        <div class="feature-name">오류</div>
+        <div class="feature-desc">인터넷 연결을 확인하고 페이지를 새로고침해 주세요.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight green">
+    <strong>✅ 3명이 동시에 확인 가능</strong><br>
+    사장님, 팀장, 직원 모두 같은 링크로 접속하면 동일한 데이터를 실시간으로 볼 수 있습니다. 한 사람이 입력하면 다른 사람 화면에도 바로 반영됩니다.
+  </div>
+
+  <div class="tip">
+    <span class="tip-icon">📶</span>
+    <span>인터넷이 연결되어 있어야 데이터가 저장되고 동기화됩니다. 와이파이 또는 모바일 데이터가 필요합니다.</span>
+  </div>
+
+  <div class="tip">
+    <span class="tip-icon">🔒</span>
+    <span>데이터는 Google Firebase 서버에 안전하게 저장됩니다. 브라우저를 지우거나 기기를 바꿔도 데이터는 사라지지 않습니다.</span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── 07 장점 ── -->
+<span class="section-anchor" id="s7"></span>
+<div class="section">
+  <div class="section-header">
+    <div class="section-icon">⭐</div>
+    <div class="section-meta">
+      <div class="section-num">07 · WHY THIS APP</div>
+      <div class="section-title">이 대시보드의 장점</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">기존 방식과 비교</div>
+    <table class="compare">
+      <thead>
+        <tr><th>항목</th><th>기존 수기/엑셀</th><th>이 대시보드</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>입력 속도</td>
+          <td class="bad">느림</td>
+          <td class="good">30초 이내</td>
+        </tr>
+        <tr>
+          <td>실시간 공유</td>
+          <td class="bad">불가</td>
+          <td class="good">3명 동시 접속</td>
+        </tr>
+        <tr>
+          <td>기간 합계</td>
+          <td class="bad">직접 계산</td>
+          <td class="good">자동 계산</td>
+        </tr>
+        <tr>
+          <td>전년 비교</td>
+          <td class="bad">직접 찾아야 함</td>
+          <td class="good">자동 표시</td>
+        </tr>
+        <tr>
+          <td>사케 재고</td>
+          <td class="bad">별도 관리</td>
+          <td class="good">통합 관리</td>
+        </tr>
+        <tr>
+          <td>입력 오류 확인</td>
+          <td class="bad">발견 어려움</td>
+          <td class="good">차액 즉시 표시</td>
+        </tr>
+        <tr>
+          <td>모바일 접근</td>
+          <td class="bad">불편</td>
+          <td class="good">최적화</td>
+        </tr>
+        <tr>
+          <td>비용</td>
+          <td>—</td>
+          <td class="good">무료</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="highlight">
+    <strong>🎯 연해주를 위해 직접 만든 앱입니다</strong><br>
+    실제 매출 보고 형식 그대로 — 총매출, 카드/계좌이체/제로페이/현금, 1층/2층, 점심/저녁, 선결제, 사케 기록까지 모두 반영되어 있습니다.
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-logo">연해주</div>
+  <div class="footer-sub">Sales Dashboard · User Guide</div>
+  <div style="margin-top:16px;font-size:12px;color:var(--text-muted);font-family:'DM Mono',monospace">문의사항은 담당자에게 연락해 주세요</div>
+</div>
+
+<!-- SCROLL TOP -->
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script>
+const btn = document.getElementById('scrollTop');
+window.addEventListener('scroll', () => {
+  btn.classList.toggle('show', window.scrollY > 300);
+});
+</script>
+</body>
+</html>
