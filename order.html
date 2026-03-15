@@ -123,8 +123,12 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .vi-name{font-size:14px;color:var(--text);font-weight:400;}
 .vi-qty{font-family:'DM Mono',monospace;font-size:13px;color:var(--primary);font-weight:500;}
 .vi-price{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;}
-.copy-btn{width:100%;padding:11px;background:var(--primary-light);border:none;border-top:1px solid var(--border);color:var(--primary);font-size:13px;font-weight:500;font-family:'Noto Sans KR',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.copy-btn-row{display:flex;border-top:1px solid var(--border);}
+.copy-btn{flex:1;padding:13px 8px;background:var(--primary-light);border:none;color:var(--primary);font-size:13px;font-weight:500;font-family:'Noto Sans KR',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;}
 .copy-btn:active{background:var(--primary);color:#fff;}
+.copy-btn.sms{background:#1a73e8;color:#fff;flex:1.2;}
+.copy-btn.sms:active{background:#1558b0;}
+.copy-btn+.copy-btn{border-left:1px solid var(--border);}
 
 .order-total-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow);}
 .otc-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-dim);}
@@ -664,12 +668,37 @@ function renderOrderSheet() {
     });
 
     html += `</div>
-      <button class="copy-btn" onclick="copyOrder('${vid}')">📋 ${vname} 발주 문자 복사</button>
+      <div class="copy-btn-row">
+        <button class="copy-btn" onclick="copyOrder('${vid}')">📋 카톡 복사</button>
+        ${vphone
+          ? `<button class="copy-btn sms" onclick="sendSms('${vid}')">💬 문자 보내기</button>`
+          : `<button class="copy-btn" style="color:var(--text-muted);background:var(--surface3)" onclick="showToast('업체 연락처를 먼저 등록해주세요')">💬 번호 미등록</button>`
+        }
+      </div>
     </div>`;
   });
 
   el.innerHTML = html;
 }
+
+window.sendSms = (vid) => {
+  const ordering = items.filter(i => stockToday[i.id]?.ordering && (i.vendorId||'etc')===vid);
+  const vendor = vendors.find(v=>v.id===vid);
+  if (!vendor?.phone) { showToast('업체 연락처를 먼저 등록해주세요'); return; }
+  const phone = vendor.phone.replace(/-/g,'');
+  const dateKo = new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+  let body = `[연해주] ${vendor.name} 발주\n${dateKo}\n\n`;
+  ordering.forEach(item => {
+    const qty = stockToday[item.id]?.orderQty || 1;
+    body += `• ${item.name} ${qty}${item.unit||''}\n`;
+  });
+  body += `\n감사합니다 🙏`;
+  // iOS: sms:번호&body=내용 / Android: sms:번호?body=내용
+  const encoded = encodeURIComponent(body);
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const sep = isIOS ? '&' : '?';
+  window.location.href = `sms:${phone}${sep}body=${encoded}`;
+};
 
 window.copyOrder = (vid) => {
   const ordering = items.filter(i => stockToday[i.id]?.ordering && (i.vendorId||'etc')===vid);
