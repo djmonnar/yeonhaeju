@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>연해주 발주</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f4f2ee; --surface:#ffffff; --surface2:#f0ede8; --surface3:#e8e4dc;
+  --border:#e0dbd2; --border2:#ccc8be;
+  --text:#1a1816; --text-dim:#5a5650; --text-muted:#9a9890;
+  --primary:#2d5a3d; --primary-light:#e8f2eb; --primary-dim:#4a7a5a;
+  --red:#c0392b; --red-light:#fdecea; --orange:#e07020; --orange-light:#fef3e8;
+  --blue:#1f618d; --blue-light:#e8f4fd;
+  --yellow:#b8860b; --yellow-light:#fef9e7;
+  --shadow:0 2px 8px rgba(0,0,0,.08); --shadow2:0 4px 20px rgba(0,0,0,.12);
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{font-size:16px;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-weight:300;min-height:100vh;max-width:480px;margin:0 auto;}
+
+/* ── TOPBAR ── */
+.topbar{position:sticky;top:0;z-index:100;background:var(--primary);padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.topbar-title{font-size:17px;font-weight:700;color:#fff;letter-spacing:.02em;}
+.topbar-right{display:flex;gap:8px;align-items:center;}
+.sync-pill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);border-radius:20px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,.9);font-family:'DM Mono',monospace;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:#aaa;}
+.sync-dot.ok{background:#6ab187;}
+.sync-dot.err{background:#e05c4b;}
+.sync-dot.spin{background:#ffd700;animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:100;background:var(--surface);border-top:1px solid var(--border);display:flex;height:62px;box-shadow:0 -2px 12px rgba(0,0,0,.06);}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--text-muted);font-size:10px;font-weight:400;transition:color .2s;border:none;background:none;font-family:'Noto Sans KR',sans-serif;}
+.nav-btn.active{color:var(--primary);}
+.nav-btn.active .nav-icon-wrap{background:var(--primary-light);}
+.nav-icon-wrap{width:32px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .2s;}
+.nav-icon{font-size:18px;line-height:1;}
+
+/* ── MAIN ── */
+.main{padding:16px 16px 80px;}
+.page{display:none;}.page.active{display:block;}
+
+/* ── SECTION HEADER ── */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.sec-title{font-size:18px;font-weight:700;color:var(--text);}
+.sec-sub{font-size:12px;color:var(--text-muted);margin-top:2px;}
+
+/* ── BIG BTN ── */
+.btn-primary{background:var(--primary);border:none;border-radius:var(--radius);color:#fff;font-size:14px;font-weight:500;font-family:'Noto Sans KR',sans-serif;padding:12px 18px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity .2s;}
+.btn-primary:active{opacity:.8;}
+.btn-sm{background:var(--primary-light);border:1px solid var(--primary);border-radius:8px;color:var(--primary);font-size:13px;font-weight:500;font-family:'Noto Sans KR',sans-serif;padding:7px 14px;cursor:pointer;}
+.btn-danger{background:var(--red-light);border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:12px;font-weight:500;font-family:'Noto Sans KR',sans-serif;padding:6px 12px;cursor:pointer;}
+.btn-ghost{background:none;border:1px solid var(--border2);border-radius:8px;color:var(--text-dim);font-size:12px;font-family:'Noto Sans KR',sans-serif;padding:6px 12px;cursor:pointer;}
+
+/* ── FILTER TABS ── */
+.filter-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:14px;padding-bottom:2px;}
+.filter-scroll::-webkit-scrollbar{display:none;}
+.filter-tabs{display:flex;gap:7px;width:max-content;}
+.ftab{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;color:var(--text-dim);cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;font-weight:400;transition:all .15s;}
+.ftab.active{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:500;}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;margin-bottom:12px;}
+.search-inp{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px 10px 38px;font-size:14px;color:var(--text);font-family:'Noto Sans KR',sans-serif;outline:none;-webkit-appearance:none;}
+.search-inp:focus{border-color:var(--primary);}
+.search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text-muted);}
+
+/* ── ITEM CARDS ── */
+.item-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0;margin-bottom:8px;box-shadow:var(--shadow);overflow:hidden;transition:box-shadow .15s;}
+.item-card.ordering{border-color:var(--primary);border-width:2px;}
+.item-card.low-stock{border-left:4px solid var(--red);}
+
+.item-top{display:flex;align-items:center;gap:10px;padding:12px 14px;}
+.drag-handle{color:var(--text-muted);font-size:20px;cursor:grab;padding:4px 2px;touch-action:none;flex-shrink:0;}
+.drag-handle:active{cursor:grabbing;}
+
+.item-info{flex:1;min-width:0;}
+.item-name{font-size:15px;font-weight:500;color:var(--text);margin-bottom:3px;}
+.item-meta{display:flex;gap:6px;flex-wrap:wrap;}
+.tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;}
+.tag-cat{background:var(--blue-light);color:var(--blue);}
+.tag-vendor{background:var(--primary-light);color:var(--primary);}
+.tag-price{background:var(--yellow-light);color:var(--yellow);font-family:'DM Mono',monospace;}
+
+.item-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.edit-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:4px;color:var(--text-muted);}
+
+/* 재고 체크 영역 */
+.stock-area{display:flex;align-items:center;gap:8px;padding:0 14px 12px;}
+.stock-label{font-size:11px;color:var(--text-muted);width:56px;flex-shrink:0;}
+.stock-controls{display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.stock-btn{background:none;border:none;width:36px;height:36px;font-size:20px;cursor:pointer;color:var(--text-dim);display:flex;align-items:center;justify-content:center;transition:background .15s;}
+.stock-btn:active{background:var(--border);}
+.stock-num{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:var(--text);min-width:36px;text-align:center;padding:0 4px;}
+.unit-label{font-size:12px;color:var(--text-muted);margin-left:4px;}
+.order-toggle{margin-left:auto;display:flex;align-items:center;gap:6px;}
+.order-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border2);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.order-check.checked{background:var(--primary);border-color:var(--primary);}
+.order-check-label{font-size:12px;color:var(--text-muted);}
+
+/* 발주수량 입력 */
+.order-qty-area{background:var(--primary-light);border-top:1px solid var(--border);padding:10px 14px;display:none;align-items:center;gap:10px;}
+.item-card.ordering .order-qty-area{display:flex;}
+.oqa-label{font-size:12px;color:var(--primary);font-weight:500;}
+.oqa-controls{display:flex;align-items:center;gap:0;background:#fff;border:1px solid var(--primary);border-radius:8px;overflow:hidden;margin-left:auto;}
+.oqa-btn{background:none;border:none;width:34px;height:34px;font-size:20px;cursor:pointer;color:var(--primary);display:flex;align-items:center;justify-content:center;}
+.oqa-num{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--primary);min-width:34px;text-align:center;}
+.oqa-unit{font-size:12px;color:var(--primary-dim);}
+
+/* ── ORDER SHEET ── */
+.order-sheet-empty{text-align:center;padding:40px 20px;color:var(--text-muted);}
+.vendor-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow);}
+.vendor-head{background:var(--primary);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+.vendor-head-name{font-size:15px;font-weight:700;color:#fff;}
+.vendor-head-count{font-size:12px;color:rgba(255,255,255,.7);font-family:'DM Mono',monospace;}
+.vendor-items{padding:8px 0;}
+.vendor-item-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);}
+.vendor-item-row:last-child{border-bottom:none;}
+.vi-name{font-size:14px;color:var(--text);font-weight:400;}
+.vi-qty{font-family:'DM Mono',monospace;font-size:13px;color:var(--primary);font-weight:500;}
+.vi-price{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;}
+.copy-btn{width:100%;padding:11px;background:var(--primary-light);border:none;border-top:1px solid var(--border);color:var(--primary);font-size:13px;font-weight:500;font-family:'Noto Sans KR',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.copy-btn:active{background:var(--primary);color:#fff;}
+
+.order-total-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow);}
+.otc-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-dim);}
+.otc-row:last-child{border-bottom:none;font-weight:700;color:var(--text);font-size:15px;}
+.otc-row span:last-child{font-family:'DM Mono',monospace;color:var(--primary);}
+
+/* ── MODALS ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 20px;}
+.modal-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:18px;}
+.form-group{margin-bottom:14px;}
+.form-label{font-size:12px;color:var(--text-muted);font-weight:500;margin-bottom:5px;display:block;letter-spacing:.03em;}
+.form-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-size:14px;color:var(--text);font-family:'Noto Sans KR',sans-serif;outline:none;-webkit-appearance:none;}
+.form-input:focus{border-color:var(--primary);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-btn{width:100%;padding:14px;background:var(--primary);border:none;border-radius:var(--radius);color:#fff;font-size:15px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;margin-top:6px;}
+.form-btn-del{width:100%;padding:12px;background:var(--red-light);border:1px solid var(--red);border-radius:var(--radius);color:var(--red);font-size:14px;font-weight:500;font-family:'Noto Sans KR',sans-serif;cursor:pointer;margin-top:8px;}
+
+/* ── CATEGORY MANAGEMENT ── */
+.cat-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow);}
+.cat-name{font-size:15px;font-weight:500;color:var(--text);}
+.cat-actions{display:flex;gap:6px;}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 20px;color:var(--text-muted);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-text{font-size:14px;line-height:1.7;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%) translateY(16px);z-index:300;background:#1a1816;color:#fff;font-size:13px;padding:10px 20px;border-radius:20px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;font-weight:500;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* ── SETTINGS ── */
+.setting-section{margin-bottom:20px;}
+.setting-label{font-size:11px;color:var(--text-muted);font-weight:500;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;padding:0 4px;}
+
+/* ── SUMMARY BAR ── */
+.summary-bar{background:var(--primary);border-radius:var(--radius);padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.sb-item{text-align:center;}
+.sb-num{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:#fff;}
+.sb-label{font-size:10px;color:rgba(255,255,255,.7);margin-top:2px;}
+
+/* 입고확인 */
+.receive-item{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px;margin-bottom:8px;box-shadow:var(--shadow);}
+.receive-check{width:26px;height:26px;border-radius:50%;border:2px solid var(--border2);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;transition:all .2s;}
+.receive-check.done{background:var(--primary);border-color:var(--primary);color:#fff;}
+.receive-info{flex:1;}
+.receive-name{font-size:14px;font-weight:500;color:var(--text);}
+.receive-meta{font-size:12px;color:var(--text-muted);margin-top:2px;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-title">🥢 연해주 발주</div>
+  <div class="topbar-right">
+    <div class="sync-pill"><span class="sync-dot spin" id="syncDot"></span><span id="syncTxt">연결중</span></div>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ▶ 오늘 체크 -->
+  <div class="page active" id="page-check">
+    <div class="sec-head">
+      <div>
+        <div class="sec-title">오늘 재고 체크</div>
+        <div class="sec-sub" id="checkDate"></div>
+      </div>
+      <button class="btn-primary" onclick="showPage('order',this.parentElement.parentElement)">발주서 보기 →</button>
+    </div>
+
+    <div id="summaryBar" class="summary-bar">
+      <div class="sb-item"><div class="sb-num" id="sbTotal">0</div><div class="sb-label">전체 품목</div></div>
+      <div class="sb-item"><div class="sb-num" id="sbLow" style="color:#ffd700">0</div><div class="sb-label">재고 부족</div></div>
+      <div class="sb-item"><div class="sb-num" id="sbOrdering" style="color:#aef">0</div><div class="sb-label">발주 예정</div></div>
+    </div>
+
+    <div class="filter-scroll">
+      <div class="filter-tabs" id="checkCatTabs"></div>
+    </div>
+
+    <div class="search-wrap">
+      <span class="search-ico">🔍</span>
+      <input class="search-inp" type="text" id="searchInp" placeholder="품목 검색..." oninput="renderCheckList()">
+    </div>
+
+    <div id="checkList"></div>
+  </div>
+
+  <!-- ▶ 발주서 -->
+  <div class="page" id="page-order">
+    <div class="sec-head">
+      <div>
+        <div class="sec-title">오늘 발주서</div>
+        <div class="sec-sub" id="orderDate"></div>
+      </div>
+      <button class="btn-ghost" onclick="exportExcel()">📊 엑셀</button>
+    </div>
+    <div id="orderContent"></div>
+  </div>
+
+  <!-- ▶ 입고 확인 -->
+  <div class="page" id="page-receive">
+    <div class="sec-head">
+      <div class="sec-title">입고 확인</div>
+    </div>
+    <div id="receiveContent"></div>
+  </div>
+
+  <!-- ▶ 품목/설정 관리 -->
+  <div class="page" id="page-settings">
+    <div class="sec-title" style="margin-bottom:16px">관리</div>
+
+    <!-- 카테고리 관리 -->
+    <div class="setting-section">
+      <div class="setting-label">품목 카테고리</div>
+      <div id="catList"></div>
+      <button class="btn-sm" style="width:100%;margin-top:4px" onclick="openCatModal()">+ 카테고리 추가</button>
+    </div>
+
+    <!-- 업체 관리 -->
+    <div class="setting-section">
+      <div class="setting-label">납품업체</div>
+      <div id="vendorList"></div>
+      <button class="btn-sm" style="width:100%;margin-top:4px" onclick="openVendorModal()">+ 업체 추가</button>
+    </div>
+
+    <!-- 품목 관리 -->
+    <div class="setting-section">
+      <div class="setting-label">품목 목록</div>
+      <div class="filter-scroll" style="margin-bottom:10px">
+        <div class="filter-tabs" id="settingCatTabs"></div>
+      </div>
+      <div id="itemMgmtList"></div>
+      <button class="btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="openItemModal()">+ 품목 추가</button>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="showPage('check',this)">
+    <div class="nav-icon-wrap"><span class="nav-icon">✅</span></div>오늘체크
+  </button>
+  <button class="nav-btn" onclick="showPage('order',this)">
+    <div class="nav-icon-wrap"><span class="nav-icon">📋</span></div>발주서
+  </button>
+  <button class="nav-btn" onclick="showPage('receive',this)">
+    <div class="nav-icon-wrap"><span class="nav-icon">📦</span></div>입고확인
+  </button>
+  <button class="nav-btn" onclick="showPage('settings',this)">
+    <div class="nav-icon-wrap"><span class="nav-icon">⚙️</span></div>관리
+  </button>
+</nav>
+
+<!-- 카테고리 모달 -->
+<div class="modal-bg" id="catModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="catModalTitle">카테고리 추가</div>
+    <input type="hidden" id="catModalId">
+    <div class="form-group">
+      <label class="form-label">카테고리 이름</label>
+      <input class="form-input" type="text" id="catModalName" placeholder="예: 육류, 채소, 소스류">
+    </div>
+    <div class="form-group">
+      <label class="form-label">이모지 (선택)</label>
+      <input class="form-input" type="text" id="catModalEmoji" placeholder="예: 🥩 🥬 🫙">
+    </div>
+    <button class="form-btn" onclick="saveCat()">저장</button>
+    <button class="form-btn-del" id="catDelBtn" onclick="deleteCat()" style="display:none">삭제</button>
+  </div>
+</div>
+
+<!-- 업체 모달 -->
+<div class="modal-bg" id="vendorModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="vendorModalTitle">업체 추가</div>
+    <input type="hidden" id="vendorModalId">
+    <div class="form-group">
+      <label class="form-label">업체 이름</label>
+      <input class="form-input" type="text" id="vendorModalName" placeholder="예: 총각유통">
+    </div>
+    <div class="form-group">
+      <label class="form-label">연락처 (선택)</label>
+      <input class="form-input" type="tel" id="vendorModalPhone" placeholder="010-0000-0000">
+    </div>
+    <button class="form-btn" onclick="saveVendor()">저장</button>
+    <button class="form-btn-del" id="vendorDelBtn" onclick="deleteVendor()" style="display:none">삭제</button>
+  </div>
+</div>
+
+<!-- 품목 모달 -->
+<div class="modal-bg" id="itemModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="itemModalTitle">품목 추가</div>
+    <input type="hidden" id="itemModalId">
+    <div class="form-group">
+      <label class="form-label">품목 이름 *</label>
+      <input class="form-input" type="text" id="itemModalName" placeholder="예: 삼겹살, 무, 간장">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">단위</label>
+        <input class="form-input" type="text" id="itemModalUnit" placeholder="kg, 개, 박스">
+      </div>
+      <div class="form-group">
+        <label class="form-label">단가 (원)</label>
+        <input class="form-input" type="number" id="itemModalPrice" placeholder="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">품목 카테고리</label>
+      <select class="form-input" id="itemModalCat"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">납품업체</label>
+      <select class="form-input" id="itemModalVendor"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">최소재고 (이하시 경고)</label>
+        <input class="form-input" type="number" id="itemModalMinStock" placeholder="2">
+      </div>
+      <div class="form-group">
+        <label class="form-label">기본 발주수량</label>
+        <input class="form-input" type="number" id="itemModalDefaultQty" placeholder="1">
+      </div>
+    </div>
+    <button class="form-btn" onclick="saveItem()">저장</button>
+    <button class="form-btn-del" id="itemDelBtn" onclick="deleteItem()" style="display:none">삭제</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyANzhzpO5TtmGdCKkgcj56hjHcT9qT8xEI",
+  authDomain: "yeonhaeju.firebaseapp.com",
+  projectId: "yeonhaeju",
+  storageBucket: "yeonhaeju.firebasestorage.app",
+  messagingSenderId: "1093568405575",
+  appId: "1:1093568405575:web:1f558aaaf06fe613a19162"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── CACHE ──
+let cats = [], vendors = [], items = [];
+let stockToday = {}; // {itemId: {current, orderQty, ordering}}
+let receives = {}; // {itemId: bool}
+let currentCatFilter = 'all';
+let settingCatFilter = 'all';
+let dragSrcIndex = null;
+
+const TODAY = new Date().toISOString().slice(0,10);
+const STOCK_KEY = 'order_stock_' + TODAY;
+const RECEIVE_KEY = 'order_receive_' + TODAY;
+
+// load local state
+try { stockToday = JSON.parse(localStorage.getItem(STOCK_KEY)) || {}; } catch(e){}
+try { receives = JSON.parse(localStorage.getItem(RECEIVE_KEY)) || {}; } catch(e){}
+
+// ── UTILS ──
+const fmt = n => n ? '₩' + Number(n).toLocaleString() : '';
+const showToast = m => { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); };
+const setSyncStatus = (state, txt) => {
+  document.getElementById('syncDot').className = 'sync-dot ' + state;
+  document.getElementById('syncTxt').textContent = txt;
+};
+const closeAllModals = () => document.querySelectorAll('.modal-bg').forEach(m=>m.classList.remove('open'));
+
+// ── NAVIGATION ──
+window.showPage = (id, el) => {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  // nav btn
+  const navMap = {check:0,order:1,receive:2,settings:3};
+  document.querySelectorAll('.nav-btn')[navMap[id]]?.classList.add('active');
+  window.scrollTo(0,0);
+  if (id==='check') renderCheckList();
+  if (id==='order') renderOrderSheet();
+  if (id==='receive') renderReceive();
+  if (id==='settings') renderSettings();
+};
+
+// ── FIREBASE LISTENERS ──
+setSyncStatus('spin','연결중');
+
+onSnapshot(collection(db,'order_categories'), snap => {
+  cats = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order||0)-(b.order||0));
+  renderAll();
+}, e => setSyncStatus('err','오류'));
+
+onSnapshot(collection(db,'order_vendors'), snap => {
+  vendors = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  renderAll();
+}, e => setSyncStatus('err','오류'));
+
+onSnapshot(query(collection(db,'order_items')), snap => {
+  items = snap.docs.map(d=>({id:d.id,...d.data()}));
+  items.sort((a,b)=>(a.order||9999)-(b.order||9999));
+  setSyncStatus('ok','동기화됨');
+  renderAll();
+}, e => { setSyncStatus('err','오류'); });
+
+function renderAll() {
+  renderCheckList();
+  const active = document.querySelector('.page.active')?.id;
+  if (active==='page-order') renderOrderSheet();
+  if (active==='page-receive') renderReceive();
+  if (active==='page-settings') renderSettings();
+}
+
+// ── DATE ──
+const dateStr = () => new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+document.getElementById('checkDate').textContent = dateStr();
+document.getElementById('orderDate').textContent = dateStr() + ' 발주';
+
+// ── CHECK LIST ──
+function renderCheckList() {
+  const search = (document.getElementById('searchInp')?.value||'').trim().toLowerCase();
+
+  // 카테고리 탭
+  const tabEl = document.getElementById('checkCatTabs');
+  tabEl.innerHTML = `<button class="ftab ${currentCatFilter==='all'?'active':''}" onclick="setCatFilter('all')">전체</button>` +
+    cats.map(c=>`<button class="ftab ${currentCatFilter===c.id?'active':''}" onclick="setCatFilter('${c.id}')">${c.emoji||''} ${c.name}</button>`).join('');
+
+  let filtered = items.filter(i => {
+    if (currentCatFilter !== 'all' && i.catId !== currentCatFilter) return false;
+    if (search && !i.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  // 요약바
+  let lowCount = 0, orderingCount = 0;
+  items.forEach(i => {
+    const s = stockToday[i.id];
+    if (s && s.current !== undefined && i.minStock && s.current <= i.minStock) lowCount++;
+    if (s?.ordering) orderingCount++;
+  });
+  document.getElementById('sbTotal').textContent = items.length;
+  document.getElementById('sbLow').textContent = lowCount;
+  document.getElementById('sbOrdering').textContent = orderingCount;
+
+  if (!filtered.length) {
+    document.getElementById('checkList').innerHTML = `<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">품목이 없습니다<br>관리 탭에서 품목을 추가해주세요</div></div>`;
+    return;
+  }
+
+  document.getElementById('checkList').innerHTML = filtered.map((item, idx) => {
+    const s = stockToday[item.id] || {current: '', orderQty: item.defaultQty||1, ordering: false};
+    const cat = cats.find(c=>c.id===item.catId);
+    const vendor = vendors.find(v=>v.id===item.vendorId);
+    const isLow = s.current !== '' && item.minStock && Number(s.current) <= item.minStock;
+    const isOrdering = s.ordering;
+
+    return `<div class="item-card ${isOrdering?'ordering':''} ${isLow?'low-stock':''}" id="icard-${item.id}" draggable="true" ondragstart="dragStart(event,'${item.id}')" ondragover="dragOver(event,'${item.id}')" ondrop="dragDrop(event,'${item.id}')" ondragend="dragEnd()">
+      <div class="item-top">
+        <div class="drag-handle">☰</div>
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-meta">
+            ${cat?`<span class="tag tag-cat">${cat.emoji||''}${cat.name}</span>`:''}
+            ${vendor?`<span class="tag tag-vendor">${vendor.name}</span>`:''}
+            ${item.price?`<span class="tag tag-price">${fmt(item.price)}/${item.unit||'개'}</span>`:''}
+          </div>
+        </div>
+        <button class="edit-btn" onclick="openItemModal('${item.id}')">✏️</button>
+      </div>
+      <div class="stock-area">
+        <span class="stock-label">현재재고</span>
+        <div class="stock-controls">
+          <button class="stock-btn" onclick="adjustStock('${item.id}',-1)">−</button>
+          <div class="stock-num" id="sn-${item.id}">${s.current !== '' ? s.current : '—'}</div>
+          <button class="stock-btn" onclick="adjustStock('${item.id}',1)">+</button>
+        </div>
+        <span class="unit-label">${item.unit||''}</span>
+        <div class="order-toggle">
+          <div class="order-check ${isOrdering?'checked':''}" onclick="toggleOrder('${item.id}')" id="oc-${item.id}">${isOrdering?'✓':''}</div>
+          <span class="order-check-label">발주</span>
+        </div>
+      </div>
+      <div class="order-qty-area" id="oqa-${item.id}">
+        <span class="oqa-label">발주수량</span>
+        <div class="oqa-controls">
+          <button class="oqa-btn" onclick="adjustOrderQty('${item.id}',-1)">−</button>
+          <div class="oqa-num" id="oqn-${item.id}">${s.orderQty||1}</div>
+          <button class="oqa-btn" onclick="adjustOrderQty('${item.id}',1)">+</button>
+        </div>
+        <span class="oqa-unit">${item.unit||''}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.setCatFilter = (id) => { currentCatFilter = id; renderCheckList(); };
+
+window.adjustStock = (id, delta) => {
+  if (!stockToday[id]) stockToday[id] = {current:0, orderQty:1, ordering:false};
+  const cur = stockToday[id].current;
+  stockToday[id].current = Math.max(0, (cur===''?0:Number(cur)) + delta);
+  saveStock();
+  const el = document.getElementById('sn-'+id);
+  if (el) el.textContent = stockToday[id].current;
+  updateSummary();
+};
+
+window.toggleOrder = (id) => {
+  if (!stockToday[id]) stockToday[id] = {current:'', orderQty:1, ordering:false};
+  stockToday[id].ordering = !stockToday[id].ordering;
+  if (!stockToday[id].orderQty) stockToday[id].orderQty = items.find(i=>i.id===id)?.defaultQty||1;
+  saveStock();
+  renderCheckList();
+};
+
+window.adjustOrderQty = (id, delta) => {
+  if (!stockToday[id]) stockToday[id] = {current:'', orderQty:1, ordering:true};
+  stockToday[id].orderQty = Math.max(1, (stockToday[id].orderQty||1) + delta);
+  saveStock();
+  const el = document.getElementById('oqn-'+id);
+  if (el) el.textContent = stockToday[id].orderQty;
+};
+
+function updateSummary() {
+  let lowCount=0, orderingCount=0;
+  items.forEach(i => {
+    const s = stockToday[i.id];
+    if (s && s.current !== '' && i.minStock && s.current <= i.minStock) lowCount++;
+    if (s?.ordering) orderingCount++;
+  });
+  document.getElementById('sbLow').textContent = lowCount;
+  document.getElementById('sbOrdering').textContent = orderingCount;
+}
+
+function saveStock() { localStorage.setItem(STOCK_KEY, JSON.stringify(stockToday)); }
+
+// ── DRAG & DROP ──
+let dragId = null;
+window.dragStart = (e, id) => { dragId=id; e.dataTransfer.effectAllowed='move'; };
+window.dragOver = (e, id) => { e.preventDefault(); e.dataTransfer.dropEffect='move'; };
+window.dragDrop = async (e, targetId) => {
+  e.preventDefault();
+  if (dragId === targetId) return;
+  const srcIdx = items.findIndex(i=>i.id===dragId);
+  const tgtIdx = items.findIndex(i=>i.id===targetId);
+  if (srcIdx<0||tgtIdx<0) return;
+  const moved = items.splice(srcIdx,1)[0];
+  items.splice(tgtIdx,0,moved);
+  // reorder 저장
+  const batch = writeBatch(db);
+  items.forEach((item,i) => {
+    batch.update(doc(db,'order_items',item.id),{order:i});
+    item.order=i;
+  });
+  await batch.commit();
+  renderCheckList();
+};
+window.dragEnd = () => { dragId=null; };
+
+// ── ORDER SHEET ──
+function renderOrderSheet() {
+  const ordering = items.filter(i => stockToday[i.id]?.ordering);
+  const el = document.getElementById('orderContent');
+
+  if (!ordering.length) {
+    el.innerHTML = `<div class="order-sheet-empty"><div style="font-size:40px;margin-bottom:12px">📋</div><div style="font-size:14px;color:var(--text-muted)">발주할 품목이 없습니다<br>오늘 체크 탭에서 발주 체크해주세요</div></div>`;
+    return;
+  }
+
+  // 업체별 그룹
+  const vendorGroups = {};
+  ordering.forEach(item => {
+    const vid = item.vendorId || 'etc';
+    if (!vendorGroups[vid]) vendorGroups[vid] = [];
+    vendorGroups[vid].push(item);
+  });
+
+  // 총액 계산
+  let grandTotal = 0;
+  const totalByVendor = {};
+  ordering.forEach(item => {
+    const qty = stockToday[item.id]?.orderQty || 1;
+    const price = item.price || 0;
+    const sub = qty * price;
+    grandTotal += sub;
+    const vid = item.vendorId || 'etc';
+    totalByVendor[vid] = (totalByVendor[vid]||0) + sub;
+  });
+
+  let html = '';
+
+  // 총액 카드
+  html += `<div class="order-total-card">`;
+  Object.entries(vendorGroups).forEach(([vid, vitems]) => {
+    const vendor = vendors.find(v=>v.id===vid);
+    const vname = vendor?.name || '기타';
+    if (totalByVendor[vid]) html += `<div class="otc-row"><span>${vname}</span><span>${fmt(totalByVendor[vid])}</span></div>`;
+  });
+  html += `<div class="otc-row"><span>합계</span><span>${fmt(grandTotal)||'금액 미입력'}</span></div></div>`;
+
+  // 업체별 발주서
+  Object.entries(vendorGroups).forEach(([vid, vitems]) => {
+    const vendor = vendors.find(v=>v.id===vid);
+    const vname = vendor?.name || '기타';
+    const vphone = vendor?.phone || '';
+
+    html += `<div class="vendor-block">
+      <div class="vendor-head">
+        <div class="vendor-head-name">${vname}${vphone?`<span style="font-size:11px;font-weight:400;margin-left:8px;opacity:.8">${vphone}</span>`:''}</div>
+        <div class="vendor-head-count">${vitems.length}품목</div>
+      </div>
+      <div class="vendor-items">`;
+
+    vitems.forEach(item => {
+      const qty = stockToday[item.id]?.orderQty || 1;
+      const sub = qty * (item.price||0);
+      html += `<div class="vendor-item-row">
+        <div>
+          <div class="vi-name">${item.name}</div>
+          ${sub?`<div class="vi-price">${fmt(item.price)}×${qty} = ${fmt(sub)}</div>`:''}
+        </div>
+        <div class="vi-qty">${qty} ${item.unit||''}</div>
+      </div>`;
+    });
+
+    html += `</div>
+      <button class="copy-btn" onclick="copyOrder('${vid}')">📋 ${vname} 발주 문자 복사</button>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+window.copyOrder = (vid) => {
+  const ordering = items.filter(i => stockToday[i.id]?.ordering && (i.vendorId||'etc')===vid);
+  const vendor = vendors.find(v=>v.id===vid);
+  const vname = vendor?.name || '기타';
+  const dateKo = new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+  let text = `[연해주] ${vname} 발주\n${dateKo}\n\n`;
+  ordering.forEach(item => {
+    const qty = stockToday[item.id]?.orderQty || 1;
+    text += `• ${item.name} ${qty}${item.unit||''}\n`;
+  });
+  text += `\n감사합니다 🙏`;
+  navigator.clipboard.writeText(text).then(()=>showToast('📋 복사됨! 카톡에 붙여넣기 하세요')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('📋 복사됨!');
+  });
+};
+
+// ── EXCEL EXPORT ──
+window.exportExcel = () => {
+  const ordering = items.filter(i => stockToday[i.id]?.ordering);
+  if (!ordering.length) { showToast('발주할 품목이 없어요'); return; }
+  let csv = '\uFEFF품목명,카테고리,업체,단위,단가,발주수량,소계\n';
+  ordering.forEach(item => {
+    const cat = cats.find(c=>c.id===item.catId)?.name||'';
+    const vendor = vendors.find(v=>v.id===item.vendorId)?.name||'';
+    const qty = stockToday[item.id]?.orderQty||1;
+    const sub = qty*(item.price||0);
+    csv += `${item.name},${cat},${vendor},${item.unit||''},${item.price||0},${qty},${sub}\n`;
+  });
+  csv += `\n합계,,,,,, ${ordering.reduce((s,i)=>{const qty=stockToday[i.id]?.orderQty||1;return s+qty*(i.price||0);},0)}\n`;
+  const date = TODAY.replace(/-/g,'');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`연해주_발주_${date}.csv`;a.click();
+  showToast('엑셀 파일 다운로드됨');
+};
+
+// ── RECEIVE ──
+function renderReceive() {
+  const ordering = items.filter(i => stockToday[i.id]?.ordering);
+  const el = document.getElementById('receiveContent');
+  if (!ordering.length) {
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">발주한 품목이 없습니다</div></div>`;
+    return;
+  }
+  const doneCount = ordering.filter(i=>receives[i.id]).length;
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:14px;font-weight:500">입고 현황</span>
+      <span style="font-family:'DM Mono',monospace;font-size:14px;color:var(--primary)">${doneCount} / ${ordering.length}</span>
+    </div>` +
+    ordering.map(item => {
+      const done = receives[item.id];
+      const vendor = vendors.find(v=>v.id===item.vendorId);
+      const qty = stockToday[item.id]?.orderQty||1;
+      return `<div class="receive-item">
+        <div class="receive-check ${done?'done':''}" onclick="toggleReceive('${item.id}')">${done?'✓':''}</div>
+        <div class="receive-info">
+          <div class="receive-name" style="${done?'text-decoration:line-through;color:var(--text-muted)':''}">${item.name}</div>
+          <div class="receive-meta">${vendor?.name||''} · ${qty}${item.unit||''}</div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+window.toggleReceive = (id) => {
+  receives[id] = !receives[id];
+  localStorage.setItem(RECEIVE_KEY, JSON.stringify(receives));
+  renderReceive();
+};
+
+// ── SETTINGS ──
+function renderSettings() {
+  // 카테고리
+  document.getElementById('catList').innerHTML = cats.length ?
+    cats.map(c=>`<div class="cat-item">
+      <div class="cat-name">${c.emoji||''} ${c.name}</div>
+      <div class="cat-actions">
+        <button class="btn-sm" onclick="openCatModal('${c.id}')">편집</button>
+        <button class="btn-danger" onclick="deleteCatById('${c.id}')">삭제</button>
+      </div>
+    </div>`).join('') :
+    '<div style="color:var(--text-muted);font-size:13px;padding:10px">카테고리가 없습니다</div>';
+
+  // 업체
+  document.getElementById('vendorList').innerHTML = vendors.length ?
+    vendors.map(v=>`<div class="cat-item">
+      <div><div class="cat-name">${v.name}</div>${v.phone?`<div style="font-size:12px;color:var(--text-muted)">${v.phone}</div>`:''}</div>
+      <div class="cat-actions">
+        <button class="btn-sm" onclick="openVendorModal('${v.id}')">편집</button>
+        <button class="btn-danger" onclick="deleteVendorById('${v.id}')">삭제</button>
+      </div>
+    </div>`).join('') :
+    '<div style="color:var(--text-muted);font-size:13px;padding:10px">업체가 없습니다</div>';
+
+  // 카테고리 필터 탭 (품목 관리)
+  document.getElementById('settingCatTabs').innerHTML =
+    `<button class="ftab ${settingCatFilter==='all'?'active':''}" onclick="setSettingCat('all')">전체</button>` +
+    cats.map(c=>`<button class="ftab ${settingCatFilter===c.id?'active':''}" onclick="setSettingCat('${c.id}')">${c.emoji||''}${c.name}</button>`).join('');
+
+  const filtered = settingCatFilter==='all' ? items : items.filter(i=>i.catId===settingCatFilter);
+
+  document.getElementById('itemMgmtList').innerHTML = filtered.length ?
+    filtered.map(item=>{
+      const cat=cats.find(c=>c.id===item.catId), vendor=vendors.find(v=>v.id===item.vendorId);
+      return `<div class="item-card" draggable="true" ondragstart="dragStart(event,'${item.id}')" ondragover="dragOver(event,'${item.id}')" ondrop="dragDrop(event,'${item.id}')" ondragend="dragEnd()">
+        <div class="item-top">
+          <div class="drag-handle">☰</div>
+          <div class="item-info">
+            <div class="item-name">${item.name}</div>
+            <div class="item-meta">
+              ${cat?`<span class="tag tag-cat">${cat.emoji||''}${cat.name}</span>`:''}
+              ${vendor?`<span class="tag tag-vendor">${vendor.name}</span>`:''}
+              ${item.unit?`<span class="tag" style="background:var(--surface3);color:var(--text-dim)">${item.unit}</span>`:''}
+              ${item.price?`<span class="tag tag-price">${fmt(item.price)}</span>`:''}
+            </div>
+          </div>
+          <button class="edit-btn" onclick="openItemModal('${item.id}')">✏️</button>
+        </div>
+      </div>`;
+    }).join('') :
+    '<div style="color:var(--text-muted);font-size:13px;padding:10px">품목이 없습니다</div>';
+}
+
+window.setSettingCat = (id) => { settingCatFilter=id; renderSettings(); };
+
+// ── CATEGORY CRUD ──
+window.openCatModal = (id) => {
+  const cat = cats.find(c=>c.id===id);
+  document.getElementById('catModalTitle').textContent = id ? '카테고리 편집' : '카테고리 추가';
+  document.getElementById('catModalId').value = id||'';
+  document.getElementById('catModalName').value = cat?.name||'';
+  document.getElementById('catModalEmoji').value = cat?.emoji||'';
+  document.getElementById('catDelBtn').style.display = id ? 'block' : 'none';
+  document.getElementById('catModal').classList.add('open');
+};
+window.saveCat = async () => {
+  const id = document.getElementById('catModalId').value;
+  const name = document.getElementById('catModalName').value.trim();
+  if (!name) { showToast('이름을 입력해주세요'); return; }
+  const data = { name, emoji: document.getElementById('catModalEmoji').value.trim(), order: id ? (cats.find(c=>c.id===id)?.order||0) : cats.length };
+  await setDoc(doc(db,'order_categories', id||('cat_'+Date.now())), data);
+  showToast(name+' 저장됨'); closeAllModals();
+};
+window.deleteCat = async () => {
+  const id = document.getElementById('catModalId').value;
+  if (!confirm('삭제하시겠습니까?')) return;
+  await deleteDoc(doc(db,'order_categories',id));
+  showToast('삭제됨'); closeAllModals();
+};
+window.deleteCatById = async (id) => {
+  if (!confirm('삭제하시겠습니까?')) return;
+  await deleteDoc(doc(db,'order_categories',id));
+  showToast('삭제됨');
+};
+
+// ── VENDOR CRUD ──
+window.openVendorModal = (id) => {
+  const v = vendors.find(x=>x.id===id);
+  document.getElementById('vendorModalTitle').textContent = id ? '업체 편집' : '업체 추가';
+  document.getElementById('vendorModalId').value = id||'';
+  document.getElementById('vendorModalName').value = v?.name||'';
+  document.getElementById('vendorModalPhone').value = v?.phone||'';
+  document.getElementById('vendorDelBtn').style.display = id ? 'block' : 'none';
+  document.getElementById('vendorModal').classList.add('open');
+};
+window.saveVendor = async () => {
+  const id = document.getElementById('vendorModalId').value;
+  const name = document.getElementById('vendorModalName').value.trim();
+  if (!name) { showToast('업체명을 입력해주세요'); return; }
+  const data = { name, phone: document.getElementById('vendorModalPhone').value.trim() };
+  await setDoc(doc(db,'order_vendors', id||('vendor_'+Date.now())), data);
+  showToast(name+' 저장됨'); closeAllModals();
+};
+window.deleteVendor = async () => {
+  const id = document.getElementById('vendorModalId').value;
+  if (!confirm('삭제하시겠습니까?')) return;
+  await deleteDoc(doc(db,'order_vendors',id));
+  showToast('삭제됨'); closeAllModals();
+};
+window.deleteVendorById = async (id) => {
+  if (!confirm('삭제하시겠습니까?')) return;
+  await deleteDoc(doc(db,'order_vendors',id));
+  showToast('삭제됨');
+};
+
+// ── ITEM CRUD ──
+window.openItemModal = (id) => {
+  const item = items.find(i=>i.id===id);
+  document.getElementById('itemModalTitle').textContent = id ? '품목 편집' : '품목 추가';
+  document.getElementById('itemModalId').value = id||'';
+  document.getElementById('itemModalName').value = item?.name||'';
+  document.getElementById('itemModalUnit').value = item?.unit||'';
+  document.getElementById('itemModalPrice').value = item?.price||'';
+  document.getElementById('itemModalMinStock').value = item?.minStock||'';
+  document.getElementById('itemModalDefaultQty').value = item?.defaultQty||'';
+
+  // 카테고리 셀렉트
+  const catSel = document.getElementById('itemModalCat');
+  catSel.innerHTML = '<option value="">카테고리 선택</option>' + cats.map(c=>`<option value="${c.id}" ${item?.catId===c.id?'selected':''}>${c.emoji||''}${c.name}</option>`).join('');
+
+  // 업체 셀렉트
+  const venSel = document.getElementById('itemModalVendor');
+  venSel.innerHTML = '<option value="">업체 선택</option>' + vendors.map(v=>`<option value="${v.id}" ${item?.vendorId===v.id?'selected':''}>${v.name}</option>`).join('');
+
+  document.getElementById('itemDelBtn').style.display = id ? 'block' : 'none';
+  document.getElementById('itemModal').classList.add('open');
+};
+window.saveItem = async () => {
+  const id = document.getElementById('itemModalId').value;
+  const name = document.getElementById('itemModalName').value.trim();
+  if (!name) { showToast('품목명을 입력해주세요'); return; }
+  const data = {
+    name,
+    unit: document.getElementById('itemModalUnit').value.trim(),
+    price: parseInt(document.getElementById('itemModalPrice').value)||0,
+    catId: document.getElementById('itemModalCat').value,
+    vendorId: document.getElementById('itemModalVendor').value,
+    minStock: parseInt(document.getElementById('itemModalMinStock').value)||0,
+    defaultQty: parseInt(document.getElementById('itemModalDefaultQty').value)||1,
+    order: id ? (items.find(i=>i.id===id)?.order||items.length) : items.length
+  };
+  await setDoc(doc(db,'order_items', id||('item_'+Date.now())), data);
+  showToast(name+' 저장됨'); closeAllModals();
+};
+window.deleteItem = async () => {
+  const id = document.getElementById('itemModalId').value;
+  if (!confirm('삭제하시겠습니까?')) return;
+  await deleteDoc(doc(db,'order_items',id));
+  showToast('삭제됨'); closeAllModals();
+};
+
+// ── MODAL CLOSE ──
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', e => { if(e.target===m) closeAllModals(); });
+});
+
+// ── SAMPLE DATA SEED ──
+async function seedSampleData() {
+  const catSnap = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js").then(({getDocs})=>getDocs(collection(db,'order_categories')));
+  if (!catSnap.empty) return; // 이미 데이터 있으면 skip
+
+  showToast('샘플 데이터 초기 설정 중...');
+  const batch = writeBatch(db);
+
+  // 카테고리
+  const catData = [
+    {id:'cat_meat',name:'육류',emoji:'🥩',order:0},
+    {id:'cat_fish',name:'생선/해산물',emoji:'🐟',order:1},
+    {id:'cat_veg',name:'채소/과일',emoji:'🥬',order:2},
+    {id:'cat_sauce',name:'소스/양념',emoji:'🫙',order:3},
+    {id:'cat_drink',name:'음료/주류',emoji:'🍶',order:4},
+    {id:'cat_misc',name:'공산품/소모품',emoji:'🧴',order:5},
+  ];
+  catData.forEach(c => batch.set(doc(db,'order_categories',c.id),c));
+
+  // 업체
+  const vendorData = [
+    {id:'v_chonggak',name:'총각유통',phone:''},
+    {id:'v_nodaji',name:'노다지유통',phone:''},
+    {id:'v_daekang',name:'대강수산',phone:''},
+    {id:'v_internet',name:'인터넷주문',phone:''},
+    {id:'v_kleenex',name:'크리넥스업체',phone:''},
+  ];
+  vendorData.forEach(v => batch.set(doc(db,'order_vendors',v.id),v));
+
+  // 품목 샘플
+  const itemData = [
+    // 육류 - 총각유통
+    {id:'i_samgyeopsal',name:'삼겹살',unit:'kg',price:18000,catId:'cat_meat',vendorId:'v_chonggak',minStock:2,defaultQty:3,order:0},
+    {id:'i_chadol',name:'차돌박이',unit:'kg',price:22000,catId:'cat_meat',vendorId:'v_chonggak',minStock:1,defaultQty:2,order:1},
+    {id:'i_wagyu',name:'와규',unit:'kg',price:80000,catId:'cat_meat',vendorId:'v_chonggak',minStock:1,defaultQty:2,order:2},
+    // 생선 - 대강수산
+    {id:'i_tuna',name:'참치',unit:'kg',price:45000,catId:'cat_fish',vendorId:'v_daekang',minStock:1,defaultQty:2,order:3},
+    {id:'i_salmon',name:'연어',unit:'kg',price:38000,catId:'cat_fish',vendorId:'v_daekang',minStock:1,defaultQty:2,order:4},
+    {id:'i_hamachi',name:'방어',unit:'kg',price:28000,catId:'cat_fish',vendorId:'v_daekang',minStock:1,defaultQty:2,order:5},
+    {id:'i_octopus',name:'문어',unit:'마리',price:25000,catId:'cat_fish',vendorId:'v_daekang',minStock:1,defaultQty:2,order:6},
+    // 채소 - 노다지유통
+    {id:'i_radish',name:'무',unit:'개',price:2000,catId:'cat_veg',vendorId:'v_nodaji',minStock:3,defaultQty:5,order:7},
+    {id:'i_ginger',name:'생강',unit:'kg',price:5000,catId:'cat_veg',vendorId:'v_nodaji',minStock:1,defaultQty:1,order:8},
+    {id:'i_shiso',name:'시소',unit:'단',price:3000,catId:'cat_veg',vendorId:'v_nodaji',minStock:2,defaultQty:3,order:9},
+    {id:'i_wasabi',name:'와사비',unit:'개',price:4000,catId:'cat_veg',vendorId:'v_internet',minStock:2,defaultQty:2,order:10},
+    {id:'i_lemon',name:'레몬',unit:'개',price:800,catId:'cat_veg',vendorId:'v_nodaji',minStock:5,defaultQty:10,order:11},
+    // 소스/양념 - 인터넷주문
+    {id:'i_soysauce',name:'간장',unit:'L',price:8000,catId:'cat_sauce',vendorId:'v_internet',minStock:2,defaultQty:2,order:12},
+    {id:'i_mirin',name:'미림',unit:'L',price:5000,catId:'cat_sauce',vendorId:'v_internet',minStock:2,defaultQty:2,order:13},
+    {id:'i_sake_cook',name:'요리사케',unit:'L',price:6000,catId:'cat_sauce',vendorId:'v_internet',minStock:2,defaultQty:2,order:14},
+    {id:'i_ponzu',name:'폰즈',unit:'개',price:9000,catId:'cat_sauce',vendorId:'v_internet',minStock:1,defaultQty:2,order:15},
+    // 소모품 - 크리넥스
+    {id:'i_tissue',name:'키친타올',unit:'롤',price:1500,catId:'cat_misc',vendorId:'v_kleenex',minStock:5,defaultQty:10,order:16},
+    {id:'i_gloves',name:'위생장갑',unit:'박스',price:8000,catId:'cat_misc',vendorId:'v_kleenex',minStock:1,defaultQty:2,order:17},
+    {id:'i_wrap',name:'랩',unit:'개',price:5000,catId:'cat_misc',vendorId:'v_kleenex',minStock:1,defaultQty:2,order:18},
+  ];
+  itemData.forEach(i => batch.set(doc(db,'order_items',i.id),i));
+
+  await batch.commit();
+  showToast('✅ 샘플 데이터 설정 완료!');
+}
+
+seedSampleData();
+</script>
+</body>
+</html>
