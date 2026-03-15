@@ -1218,8 +1218,20 @@ window.exportTemplate = () => {
   const date = document.getElementById('inp_date').value;
   if (!date) { showToast('날짜를 입력해주세요'); return; }
 
-  // 현재 입력폼에서 값 읽기 (저장된 데이터 or 입력중인 값)
-  const entry = salesCache.find(x=>x.date===date) || {
+  // 저장된 데이터 우선, 없으면 현재 입력폼에서 읽기
+  const saved = salesCache.find(x=>x.date===date);
+
+  // 누적: 오늘 포함해서 같은 달 전체 합산
+  const ym = date.slice(0,7);
+  const autoCumulative = (() => {
+    const total = saved ? saved.total : (parseInt(document.getElementById('inp_total').value)||0);
+    const prevTotal = salesCache
+      .filter(d => d.date?.startsWith(ym) && d.date !== date)
+      .reduce((s,d) => s+(d.total||0), 0);
+    return prevTotal + total;
+  })();
+
+  const entry = saved || {
     total: parseInt(document.getElementById('inp_total').value)||0,
     card: parseInt(document.getElementById('inp_card').value)||0,
     transfer: parseInt(document.getElementById('inp_transfer').value)||0,
@@ -1229,12 +1241,16 @@ window.exportTemplate = () => {
     floor2: parseInt(document.getElementById('inp_floor2').value)||0,
     lunch: parseInt(document.getElementById('inp_lunch').value)||0,
     dinner: parseInt(document.getElementById('inp_dinner').value)||0,
-    cumulative: parseInt(document.getElementById('inp_cumulative').value) || (() => {
-      const ym2 = date.slice(0,7);
-      return salesCache.filter(d=>d.date?.startsWith(ym2)&&d.date<=date).reduce((s,d)=>s+(d.total||0),0);
-    })(),
     note: document.getElementById('inp_note').value,
-    prepay: [],
+    prepay: (() => {
+      const rows = [];
+      document.querySelectorAll('#prepayInputs .sake-row-inp').forEach(r => {
+        const amt = parseInt(r.querySelector('.prepay-amt')?.value||0);
+        const memo = r.querySelector('.prepay-memo')?.value||'';
+        if (amt) rows.push({amt, memo});
+      });
+      return rows;
+    })(),
     sake: [],
   };
 
@@ -1243,38 +1259,45 @@ window.exportTemplate = () => {
   const mm = String(d.getMonth()+1).padStart(2,'0');
   const dd = String(d.getDate()).padStart(2,'0');
   const dayKo = ['일','월','화','수','목','금','토'][d.getDay()];
-  const note = entry.note ? `(${entry.note})` : '';
+  // 날짜 뒤 항상 (연해주) 표시, note가 있으면 함께
+  const noteStr = entry.note && entry.note !== '연해주' ? `(연해주/${entry.note})` : '(연해주)';
   const fmtN = n => n ? n.toLocaleString() : '';
-  const pad = (label, val) => val ? `${label.padEnd(8,'　')} ${fmtN(val)}\n` : '';
+  const pad = (label, val) => val ? `${label}    ${fmtN(val)}\n` : '';
 
-  // 선결제
-  const prepayLines = (entry.prepay||[]).map(p => p.amt ? `               ${fmtN(p.amt)}${p.memo?' ('+p.memo+')':''}\n` : '').join('');
-
-  // 사케
-  const sakeLines = (entry.sake||[]).filter(s=>s.name&&s.qty).map(s => `사케     ${s.name} ${s.qty}`).join('\n           ');
-
-  let text = `${yy}/${mm}/${dd} ${dayKo}${note}\n\n`;
+  let text = `${yy}/${mm}/${dd} ${dayKo} ${noteStr}\n\n`;
   text += pad('총매출', entry.total);
   text += '\n';
   text += pad('카드', entry.card);
   text += pad('계좌이체', entry.transfer);
-  text += pad('제로페이', entry.zeropay);
-  text += pad('현금', entry.cash);
+  text += entry.zeropay ? pad('제로페이', entry.zeropay) : '제로페이 \n';
+  text += entry.cash ? pad('현금', entry.cash) : '현금          \n';
   text += '\n';
-  text += pad('1층매출', entry.floor1);
-  text += pad('2층매출', entry.floor2);
+  text += entry.floor1 ? pad('1층매출', entry.floor1) : '1층매출        \n';
+  text += entry.floor2 ? pad('2층매출', entry.floor2) : '2층매출        \n';
   text += pad('점심', entry.lunch);
   text += pad('저녁', entry.dinner);
-  if ((entry.prepay||[]).length) {
+
+  // ✅ 선결제 — 전부 출력
+  const prepayList = (entry.prepay||[]).filter(p=>p.amt);
+  if (prepayList.length) {
     text += '\n';
-    text += `선결제      ${fmtN((entry.prepay||[])[0]?.amt)}\n`;
-    text += (entry.prepay||[]).slice(1).map(p=>p.amt?`               ${fmtN(p.amt)}\n`:'').join('');
+    text += `선결제      ${fmtN(prepayList[0].amt)}${prepayList[0].memo?' ('+prepayList[0].memo+')':''}\n`;
+    prepayList.slice(1).forEach(p => {
+      text += `               ${fmtN(p.amt)}${p.memo?' ('+p.memo+')':''}\n`;
+    });
   }
-  if (sakeLines) { text += '\n' + sakeLines + '\n'; }
-  if (entry.cumulative) { text += `\n누적     ${fmtN(entry.cumulative)}`; }
+
+  // 사케
+  const sakeList = (entry.sake||[]).filter(s=>s.name&&s.qty);
+  if (sakeList.length) {
+    text += '\n사케     ' + sakeList.map(s=>`${s.name} ${s.qty}`).join('\n           ') + '\n';
+  }
+
+  // ✅ 누적 — 오늘 포함 자동계산
+  text += `\n누적     ${fmtN(autoCumulative)}`;
 
   navigator.clipboard.writeText(text)
-    .then(()=>showToast('📋 템플릿 복사됨! 어디든 붙여넣기 하세요'))
+    .then(()=>showToast('📋 템플릿 복사됨! 붙여넣기 하세요'))
     .catch(()=>{
       const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
       showToast('📋 복사됨!');
@@ -1506,4 +1529,3 @@ document.getElementById('historyMonth').value = today().slice(0,7);
 addSakeRow();
 updateCumulativeDisplay();
 </script>
-
