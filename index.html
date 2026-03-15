@@ -307,12 +307,16 @@ textarea{resize:none;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-w
   <div class="form-section">
     <div class="form-sec-title">📅 기본 정보</div>
     <div class="form-row">
-      <div class="form-group"><label>날짜</label><input type="date" id="inp_date"></div>
+      <div class="form-group"><label>날짜</label><input type="date" id="inp_date" onchange="updateCumulativeDisplay()"></div>
       <div class="form-group"><label>특이사항</label><input type="text" id="inp_note" placeholder="연해주, 우천 등"></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>총 매출</label><input type="number" id="inp_total" placeholder="0" oninput="onTotalChange()"></div>
-      <div class="form-group"><label>월 누적</label><input type="number" id="inp_cumulative" placeholder="0"></div>
+      <div class="form-group">
+        <label>월 누적 <span style="font-size:9px;color:var(--gold-dim);letter-spacing:.05em">(자동계산)</span></label>
+        <div id="inp_cumulative_display" style="background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:13px;color:var(--gold);min-height:40px">계산 중...</div>
+        <input type="hidden" id="inp_cumulative">
+      </div>
     </div>
   </div>
 
@@ -466,6 +470,7 @@ textarea{resize:none;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-w
     </div>
     <div class="form-group" style="margin-bottom:16px"><label>알림 기준 재고 (이하면 경고)</label><input type="number" id="modal_sakeAlert" placeholder="3"></div>
     <button class="btn-save" onclick="saveSakeItem()">등록하기</button>
+    <button id="modal_sakeDelBtn" style="display:none;width:100%;padding:12px;background:rgba(224,92,75,.1);border:1px solid rgba(224,92,75,.3);border-radius:10px;color:var(--red);font-size:14px;font-weight:500;font-family:'Noto Sans KR',sans-serif;cursor:pointer;margin-top:8px" onclick="deleteSakeItemFromModal()">삭제</button>
   </div>
 </div>
 
@@ -657,7 +662,21 @@ window.saveTarget = () => {
 };
 
 // ── AUTO CALC ──
-window.onTotalChange = () => { checkDiff(); autoFloor(''); autoMeal(''); };
+window.onTotalChange = () => { checkDiff(); autoFloor(''); autoMeal(''); updateCumulativeDisplay(); };
+
+window.updateCumulativeDisplay = () => {
+  const date = document.getElementById('inp_date').value;
+  const el = document.getElementById('inp_cumulative_display');
+  if (!el) return;
+  if (!date) { el.textContent = '날짜를 먼저 선택하세요'; return; }
+  const ym = date.slice(0,7);
+  const total = parseInt(document.getElementById('inp_total').value)||0;
+  const prevTotal = salesCache
+    .filter(d => d.date?.startsWith(ym) && d.date !== date)
+    .reduce((s,d) => s+(d.total||0), 0);
+  const calc = prevTotal + total;
+  el.textContent = calc ? '₩' + calc.toLocaleString() : (prevTotal ? '₩' + prevTotal.toLocaleString() + ' (총매출 입력 전)' : '이달 첫 매출');
+};
 
 window.autoFloor = (changed) => {
   const total = parseInt(document.getElementById('inp_total').value)||0;
@@ -756,12 +775,20 @@ window.saveEntry = async () => {
     if (amt) prepay.push({ amt, memo });
   });
 
+  const total = parseInt(document.getElementById('inp_total').value)||0;
+  // 월 누적 자동계산: 같은 달 저장된 매출 합계 + 오늘 (기존 오늘 데이터 제외 후 재계산)
+  const ym = date.slice(0,7);
+  const prevTotal = salesCache
+    .filter(d => d.date?.startsWith(ym) && d.date !== date)
+    .reduce((s,d) => s+(d.total||0), 0);
+  const auto累積 = prevTotal + total;
+
   const entry = {
     date,
     note: document.getElementById('inp_note').value,
     memo: document.getElementById('inp_memo').value,
-    total: parseInt(document.getElementById('inp_total').value)||0,
-    cumulative: parseInt(document.getElementById('inp_cumulative').value)||0,
+    total,
+    cumulative: auto累積,
     card: parseInt(document.getElementById('inp_card').value)||0,
     transfer: parseInt(document.getElementById('inp_transfer').value)||0,
     zeropay: parseInt(document.getElementById('inp_zeropay').value)||0,
@@ -784,7 +811,7 @@ window.saveEntry = async () => {
     // 다음날짜 세팅
     const next = new Date(date+'T00:00:00'); next.setDate(next.getDate()+1);
     document.getElementById('inp_date').value = next.toISOString().slice(0,10);
-    ['inp_total','inp_cumulative','inp_card','inp_transfer','inp_zeropay','inp_cash','inp_floor1','inp_floor2','inp_lunch','inp_dinner','inp_note','inp_memo'].forEach(id => document.getElementById(id).value='');
+    ['inp_total','inp_card','inp_transfer','inp_zeropay','inp_cash','inp_floor1','inp_floor2','inp_lunch','inp_dinner','inp_note','inp_memo'].forEach(id => document.getElementById(id).value='');
     ['hint_floor1','hint_floor2','hint_lunch','hint_dinner'].forEach(id => document.getElementById(id).textContent='');
     document.getElementById('diffAlert').style.display='none';
     document.getElementById('sakeInputs').innerHTML='';
@@ -1028,13 +1055,14 @@ window.goInput = (ds) => {
 };
 
 function loadEntryToForm(entry) {
-  ['total','cumulative','card','transfer','zeropay','cash','floor1','floor2','lunch','dinner'].forEach(k=>{
+  ['total','card','transfer','zeropay','cash','floor1','floor2','lunch','dinner'].forEach(k=>{
     const el=document.getElementById('inp_'+k); if(el) el.value=entry[k]||'';
   });
   document.getElementById('inp_note').value=entry.note||'';
   document.getElementById('inp_memo').value=entry.memo||'';
   ['hint_floor1','hint_floor2','hint_lunch','hint_dinner'].forEach(id=>document.getElementById(id).textContent='');
   document.getElementById('diffAlert').style.display='none';
+  setTimeout(updateCumulativeDisplay, 100);
   // sake
   document.getElementById('sakeInputs').innerHTML='';
   if ((entry.sake||[]).length) {
@@ -1082,7 +1110,7 @@ function renderSakePage() {
             <div class="sake-stock-label">재고</div>
           </div>
           <div class="sake-actions">
-            <button class="stock-adj-btn" onclick="openStockModal('${item.id}','${item.name}',${item.stock||0})">✎</button>
+            <button class="stock-adj-btn" onclick="openAddSakeModal('${item.id}')">✎</button>
             <button class="danger-btn" onclick="deleteSakeItem('${item.id}','${item.name}')">삭제</button>
           </div>
         </div>
@@ -1109,28 +1137,56 @@ function renderSakePage() {
 }
 
 // 사케 등록/수정/삭제
-window.openAddSakeModal = () => {
-  ['modal_sakeName','modal_sakeType','modal_sakeSize','modal_sakeStock','modal_sakeAlert'].forEach(id=>document.getElementById(id).value='');
+window.openAddSakeModal = (editId) => {
+  const item = editId ? sakeItemsCache.find(s=>s.id===editId) : null;
+  document.getElementById('addSakeModal').querySelector('.modal-title').textContent = item ? '사케 편집' : '사케 등록';
+  document.getElementById('modal_sakeName').value = item?.name||'';
+  document.getElementById('modal_sakeType').value = item?.type||'';
+  document.getElementById('modal_sakeSize').value = item?.size||'';
+  document.getElementById('modal_sakeStock').value = item?.stock||0;
+  document.getElementById('modal_sakeAlert').value = item?.alertStock||3;
+  // 편집 ID 저장
+  document.getElementById('addSakeModal').dataset.editId = editId||'';
+  // 저장 버튼 텍스트
+  document.querySelector('#addSakeModal .btn-save').textContent = item ? '수정하기' : '등록하기';
+  // 삭제 버튼
+  const delBtn = document.getElementById('modal_sakeDelBtn');
+  delBtn.style.display = item ? 'block' : 'none';
   document.getElementById('addSakeModal').classList.add('open');
 };
 window.saveSakeItem = async () => {
   const name = document.getElementById('modal_sakeName').value.trim();
   if (!name) { showToast('이름을 입력해주세요'); return; }
+  const editId = document.getElementById('addSakeModal').dataset.editId;
+  const existingItem = editId ? sakeItemsCache.find(s=>s.id===editId) : null;
   const item = {
-    name, type:document.getElementById('modal_sakeType').value.trim(),
-    size:document.getElementById('modal_sakeSize').value.trim(),
-    stock:parseInt(document.getElementById('modal_sakeStock').value)||0,
-    alertStock:parseInt(document.getElementById('modal_sakeAlert').value)||3,
-    createdAt:new Date().toISOString()
+    name,
+    type: document.getElementById('modal_sakeType').value.trim(),
+    size: document.getElementById('modal_sakeSize').value.trim(),
+    stock: parseInt(document.getElementById('modal_sakeStock').value)||0,
+    alertStock: parseInt(document.getElementById('modal_sakeAlert').value)||3,
+    order: existingItem?.order ?? sakeItemsCache.length,
+    createdAt: existingItem?.createdAt || new Date().toISOString()
   };
   try {
     setSyncStatus('spin','저장중');
-    const id = name.replace(/\s+/g,'_')+'_'+Date.now();
+    const id = editId || (name.replace(/\s+/g,'_')+'_'+Date.now());
     await setDoc(doc(db,'sake_items',id), item);
     setSyncStatus('ok','동기화됨');
-    showToast(name+' 등록됨');
+    showToast(name+(editId?' 수정됨':' 등록됨'));
     closeModal('addSakeModal');
   } catch(e) { setSyncStatus('err','오류'); showToast('실패: '+e.message); }
+};
+window.deleteSakeItemFromModal = async () => {
+  const editId = document.getElementById('addSakeModal').dataset.editId;
+  const item = sakeItemsCache.find(s=>s.id===editId);
+  if (!item) return;
+  if (!confirm(item.name+' 을 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db,'sake_items',editId));
+    showToast(item.name+' 삭제됨');
+    closeModal('addSakeModal');
+  } catch(e) { showToast('실패: '+e.message); }
 };
 window.openStockModal = (id, name, stock) => {
   document.getElementById('stockModalTitle').textContent = name+' 재고 수정';
@@ -1173,7 +1229,10 @@ window.exportTemplate = () => {
     floor2: parseInt(document.getElementById('inp_floor2').value)||0,
     lunch: parseInt(document.getElementById('inp_lunch').value)||0,
     dinner: parseInt(document.getElementById('inp_dinner').value)||0,
-    cumulative: parseInt(document.getElementById('inp_cumulative').value)||0,
+    cumulative: parseInt(document.getElementById('inp_cumulative').value) || (() => {
+      const ym2 = date.slice(0,7);
+      return salesCache.filter(d=>d.date?.startsWith(ym2)&&d.date<=date).reduce((s,d)=>s+(d.total||0),0);
+    })(),
     note: document.getElementById('inp_note').value,
     prepay: [],
     sake: [],
@@ -1292,6 +1351,8 @@ window.importTemplate = () => {
   document.getElementById('inp_lunch').value = lunch||'';
   document.getElementById('inp_dinner').value = dinner||'';
   document.getElementById('inp_cumulative').value = cumulative||'';
+  // 월 누적 디스플레이 업데이트
+  setTimeout(updateCumulativeDisplay, 100);
 
   // 선결제 채우기
   if (prepay.length) {
@@ -1381,4 +1442,5 @@ window.exportCSV = () => {
 document.getElementById('inp_date').value = today();
 document.getElementById('historyMonth').value = today().slice(0,7);
 addSakeRow();
+updateCumulativeDisplay();
 </script>
