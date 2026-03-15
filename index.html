@@ -380,6 +380,29 @@ textarea{resize:none;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-w
 
   <button class="btn-save" onclick="saveEntry()">✦ 저장하기</button>
   <div class="save-ok" id="saveOk">✓ 저장되었습니다</div>
+
+  <!-- 내보내기 / 들여오기 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+    <button onclick="exportTemplate()" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;color:var(--text-dim);font-size:13px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+      📋 템플릿 복사
+    </button>
+    <button onclick="document.getElementById('importArea').style.display=document.getElementById('importArea').style.display==='none'?'block':'none'" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;color:var(--text-dim);font-size:13px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+      📥 템플릿 불러오기
+    </button>
+  </div>
+  <div id="importArea" style="display:none;margin-top:10px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;letter-spacing:.1em;margin-bottom:8px">아래에 템플릿 텍스트를 붙여넣으세요</div>
+      <textarea id="importText" rows="10" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;outline:none;resize:none;line-height:1.7" placeholder="26/03/14 토(연해주)
+
+총매출    10,733,000
+카드       10,579,000
+..."></textarea>
+      <button onclick="importTemplate()" style="width:100%;margin-top:8px;padding:12px;background:linear-gradient(135deg,var(--gold-dim),var(--gold));border:none;border-radius:8px;color:#0c0c0a;font-size:14px;font-weight:500;font-family:'Noto Sans KR',sans-serif;cursor:pointer">
+        ✦ 자동 입력하기
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- ▶ 사케관리 -->
@@ -537,7 +560,7 @@ onSnapshot(query(collection(db, 'sales'), orderBy('date', 'desc')), snap => {
 
 onSnapshot(collection(db, 'sake_items'), snap => {
   sakeItemsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  sakeItemsCache.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  sakeItemsCache.sort((a,b) => (a.order!==undefined&&b.order!==undefined) ? a.order-b.order : (a.name||'').localeCompare(b.name||''));
   refreshSakeSelect();
   const activePage = document.querySelector('.page.active')?.id;
   if (activePage === 'page-sake') renderSakePage();
@@ -1040,9 +1063,15 @@ function renderSakePage() {
   if (!items.length) {
     listEl.innerHTML='<div style="text-align:center;padding:24px;color:var(--text-muted);font-family:\'DM Mono\',monospace;font-size:12px">등록된 사케 없음<br>우측 상단 + 등록 버튼을 눌러주세요</div>';
   } else {
-    listEl.innerHTML = items.map(item => {
+    listEl.innerHTML = items.map((item, idx) => {
       const isLow = item.alertStock && (item.stock||0) <= item.alertStock;
-      return `<div class="sake-mgmt-card">
+      return `<div class="sake-mgmt-card" draggable="true" id="sakecard-${item.id}"
+        ondragstart="sakeDragStart(event,'${item.id}')"
+        ondragover="sakeDragOver(event,'${item.id}')"
+        ondrop="sakeDragDrop(event,'${item.id}')"
+        ondragend="sakeDragEnd()"
+        style="cursor:default">
+        <div style="color:var(--text-muted);font-size:20px;cursor:grab;padding:4px 8px 4px 0;touch-action:none;flex-shrink:0">☰</div>
         <div class="sake-mgmt-info">
           <div class="sake-mgmt-name">${item.name}</div>
           <div class="sake-mgmt-meta">${item.type||''} ${item.size||''}</div>
@@ -1128,7 +1157,199 @@ window.deleteSakeItem = async (id, name) => {
 };
 window.closeModal = (id) => document.getElementById(id).classList.remove('open');
 
-// ── HISTORY ──
+// ── 내보내기 (템플릿 복사) ──
+window.exportTemplate = () => {
+  const date = document.getElementById('inp_date').value;
+  if (!date) { showToast('날짜를 입력해주세요'); return; }
+
+  // 현재 입력폼에서 값 읽기 (저장된 데이터 or 입력중인 값)
+  const entry = salesCache.find(x=>x.date===date) || {
+    total: parseInt(document.getElementById('inp_total').value)||0,
+    card: parseInt(document.getElementById('inp_card').value)||0,
+    transfer: parseInt(document.getElementById('inp_transfer').value)||0,
+    zeropay: parseInt(document.getElementById('inp_zeropay').value)||0,
+    cash: parseInt(document.getElementById('inp_cash').value)||0,
+    floor1: parseInt(document.getElementById('inp_floor1').value)||0,
+    floor2: parseInt(document.getElementById('inp_floor2').value)||0,
+    lunch: parseInt(document.getElementById('inp_lunch').value)||0,
+    dinner: parseInt(document.getElementById('inp_dinner').value)||0,
+    cumulative: parseInt(document.getElementById('inp_cumulative').value)||0,
+    note: document.getElementById('inp_note').value,
+    prepay: [],
+    sake: [],
+  };
+
+  const d = new Date(date+'T00:00:00');
+  const yy = String(d.getFullYear()).slice(2);
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  const dayKo = ['일','월','화','수','목','금','토'][d.getDay()];
+  const note = entry.note ? `(${entry.note})` : '';
+  const fmtN = n => n ? n.toLocaleString() : '';
+  const pad = (label, val) => val ? `${label.padEnd(8,'　')} ${fmtN(val)}\n` : '';
+
+  // 선결제
+  const prepayLines = (entry.prepay||[]).map(p => p.amt ? `               ${fmtN(p.amt)}${p.memo?' ('+p.memo+')':''}\n` : '').join('');
+
+  // 사케
+  const sakeLines = (entry.sake||[]).filter(s=>s.name&&s.qty).map(s => `사케     ${s.name} ${s.qty}`).join('\n           ');
+
+  let text = `${yy}/${mm}/${dd} ${dayKo}${note}\n\n`;
+  text += pad('총매출', entry.total);
+  text += '\n';
+  text += pad('카드', entry.card);
+  text += pad('계좌이체', entry.transfer);
+  text += pad('제로페이', entry.zeropay);
+  text += pad('현금', entry.cash);
+  text += '\n';
+  text += pad('1층매출', entry.floor1);
+  text += pad('2층매출', entry.floor2);
+  text += pad('점심', entry.lunch);
+  text += pad('저녁', entry.dinner);
+  if ((entry.prepay||[]).length) {
+    text += '\n';
+    text += `선결제      ${fmtN((entry.prepay||[])[0]?.amt)}\n`;
+    text += (entry.prepay||[]).slice(1).map(p=>p.amt?`               ${fmtN(p.amt)}\n`:'').join('');
+  }
+  if (sakeLines) { text += '\n' + sakeLines + '\n'; }
+  if (entry.cumulative) { text += `\n누적     ${fmtN(entry.cumulative)}`; }
+
+  navigator.clipboard.writeText(text)
+    .then(()=>showToast('📋 템플릿 복사됨! 어디든 붙여넣기 하세요'))
+    .catch(()=>{
+      const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+      showToast('📋 복사됨!');
+    });
+};
+
+// ── 들여오기 (템플릿 파싱) ──
+window.importTemplate = () => {
+  const raw = document.getElementById('importText').value.trim();
+  if (!raw) { showToast('텍스트를 붙여넣어 주세요'); return; }
+
+  const clean = n => parseInt((n||'').replace(/[,\s]/g,''))||0;
+  const findNum = (lines, ...keywords) => {
+    for (const line of lines) {
+      const l = line.replace(/\s/g,'');
+      for (const kw of keywords) {
+        if (l.includes(kw.replace(/\s/g,''))) {
+          const m = l.match(/[-+]?[\d,]+/);
+          if (m) return parseInt(m[0].replace(/,/g,''));
+        }
+      }
+    }
+    return 0;
+  };
+
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+
+  // 날짜 파싱 (26/03/14 or 2026/03/14)
+  let dateStr = '';
+  const dateMatch = raw.match(/(\d{2,4})\/(\d{2})\/(\d{2})/);
+  if (dateMatch) {
+    let yr = dateMatch[1];
+    if (yr.length === 2) yr = '20'+yr;
+    dateStr = `${yr}-${dateMatch[2]}-${dateMatch[3]}`;
+  }
+
+  // 특이사항
+  const noteMatch = raw.match(/[（(]([^）)]+)[）)]/);
+  const note = noteMatch ? noteMatch[1] : '';
+
+  const total = findNum(lines,'총매출');
+  const card = findNum(lines,'카드');
+  const transfer = findNum(lines,'계좌이체');
+  const zeropay = findNum(lines,'제로페이');
+  const cash = findNum(lines,'현금');
+  const floor1 = findNum(lines,'1층매출','1층');
+  const floor2 = findNum(lines,'2층매출','2층');
+  const lunch = findNum(lines,'점심');
+  const dinner = findNum(lines,'저녁');
+  const cumulative = findNum(lines,'누적');
+
+  // 선결제 파싱
+  const prepay = [];
+  lines.forEach(line => {
+    if (line.includes('선결제')) {
+      const nums = line.match(/[-+]?[\d,]+/g);
+      if (nums) nums.forEach(n => { const v=parseInt(n.replace(/,/g,'')); if(v) prepay.push({amt:v,memo:''}); });
+    } else if (prepay.length > 0 && !line.match(/[가-힣a-zA-Z]+/) && line.match(/[-+]?[\d,]+/)) {
+      const m = line.match(/[-+]?[\d,]+/g);
+      if (m) m.forEach(n=>{ const v=parseInt(n.replace(/,/g,'')); if(v) prepay.push({amt:v,memo:''}); });
+    }
+  });
+
+  // 폼에 값 채우기
+  if (dateStr) document.getElementById('inp_date').value = dateStr;
+  document.getElementById('inp_note').value = note;
+  document.getElementById('inp_total').value = total||'';
+  document.getElementById('inp_card').value = card||'';
+  document.getElementById('inp_transfer').value = transfer||'';
+  document.getElementById('inp_zeropay').value = zeropay||'';
+  document.getElementById('inp_cash').value = cash||'';
+  document.getElementById('inp_floor1').value = floor1||'';
+  document.getElementById('inp_floor2').value = floor2||'';
+  document.getElementById('inp_lunch').value = lunch||'';
+  document.getElementById('inp_dinner').value = dinner||'';
+  document.getElementById('inp_cumulative').value = cumulative||'';
+
+  // 선결제 채우기
+  if (prepay.length) {
+    document.getElementById('prepayInputs').innerHTML = prepay.map(p=>
+      `<div class="sake-row-inp"><input type="number" class="prepay-amt" value="${p.amt}" placeholder="금액"><input type="text" class="prepay-memo" value="" placeholder="메모"><button class="btn-remove" onclick="this.parentElement.remove()">×</button></div>`
+    ).join('');
+  }
+
+  // 차액 체크
+  checkDiff();
+
+  // 들여오기 영역 닫기
+  document.getElementById('importArea').style.display = 'none';
+  document.getElementById('importText').value = '';
+
+  // 위로 스크롤
+  window.scrollTo(0, 0);
+  showToast(`✅ ${dateStr} 자동 입력 완료! 확인 후 저장하세요`);
+};
+
+// ── 사케 드래그앤드롭 ──
+let sakeDragId = null;
+window.sakeDragStart = (e, id) => {
+  sakeDragId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.style.opacity = '0.5';
+};
+window.sakeDragOver = (e, id) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+};
+window.sakeDragDrop = async (e, targetId) => {
+  e.preventDefault();
+  if (sakeDragId === targetId) return;
+  const srcIdx = sakeItemsCache.findIndex(i=>i.id===sakeDragId);
+  const tgtIdx = sakeItemsCache.findIndex(i=>i.id===targetId);
+  if (srcIdx<0||tgtIdx<0) return;
+  const moved = sakeItemsCache.splice(srcIdx,1)[0];
+  sakeItemsCache.splice(tgtIdx,0,moved);
+  // Firebase에 순서 저장
+  try {
+    const { writeBatch } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const batch = writeBatch(db);
+    sakeItemsCache.forEach((item,i) => {
+      batch.update(doc(db,'sake_items',item.id),{order:i});
+      item.order=i;
+    });
+    await batch.commit();
+    refreshSakeSelect();
+  } catch(e) { console.error(e); }
+  renderSakePage();
+};
+window.sakeDragEnd = () => {
+  sakeDragId = null;
+  document.querySelectorAll('.sake-mgmt-card').forEach(el=>el.style.opacity='1');
+};
+
+
 window.renderHistory = () => {
   const ym = document.getElementById('historyMonth').value;
   const data = salesCache.filter(d=>d.date?.startsWith(ym)).sort((a,b)=>b.date.localeCompare(a.date));
