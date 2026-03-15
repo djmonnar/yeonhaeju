@@ -490,7 +490,7 @@ textarea{resize:none;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-w
 </html>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, onSnapshot, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, onSnapshot, deleteDoc, query, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyANzhzpO5TtmGdCKkgcj56hjHcT9qT8xEI",
@@ -1099,7 +1099,7 @@ function renderSakePage() {
         ondrop="sakeDragDrop(event,'${item.id}')"
         ondragend="sakeDragEnd()"
         style="cursor:default">
-        <div style="color:var(--text-muted);font-size:20px;cursor:grab;padding:4px 8px 4px 0;touch-action:none;flex-shrink:0">☰</div>
+        <div class="sake-drag-handle" style="color:var(--text-muted);font-size:22px;cursor:grab;padding:4px 10px 4px 0;touch-action:none;flex-shrink:0;user-select:none">☰</div>
         <div class="sake-mgmt-info">
           <div class="sake-mgmt-name">${item.name}</div>
           <div class="sake-mgmt-meta">${item.type||''} ${item.size||''}</div>
@@ -1386,7 +1386,7 @@ window.sakeDragOver = (e, id) => {
 };
 window.sakeDragDrop = async (e, targetId) => {
   e.preventDefault();
-  if (sakeDragId === targetId) return;
+  if (!sakeDragId || sakeDragId === targetId) return;
   const srcIdx = sakeItemsCache.findIndex(i=>i.id===sakeDragId);
   const tgtIdx = sakeItemsCache.findIndex(i=>i.id===targetId);
   if (srcIdx<0||tgtIdx<0) return;
@@ -1394,7 +1394,6 @@ window.sakeDragDrop = async (e, targetId) => {
   sakeItemsCache.splice(tgtIdx,0,moved);
   // Firebase에 순서 저장
   try {
-    const { writeBatch } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     const batch = writeBatch(db);
     sakeItemsCache.forEach((item,i) => {
       batch.update(doc(db,'sake_items',item.id),{order:i});
@@ -1402,13 +1401,76 @@ window.sakeDragDrop = async (e, targetId) => {
     });
     await batch.commit();
     refreshSakeSelect();
-  } catch(e) { console.error(e); }
+  } catch(err) { console.error(err); }
   renderSakePage();
 };
 window.sakeDragEnd = () => {
   sakeDragId = null;
   document.querySelectorAll('.sake-mgmt-card').forEach(el=>el.style.opacity='1');
 };
+
+// 모바일 터치 드래그 지원
+let touchSakeDragId = null;
+let touchSakeDragEl = null;
+let touchClone = null;
+
+document.addEventListener('touchstart', e => {
+  const handle = e.target.closest('.sake-drag-handle');
+  if (!handle) return;
+  const card = handle.closest('.sake-mgmt-card');
+  if (!card) return;
+  touchSakeDragId = card.id.replace('sakecard-','');
+  touchSakeDragEl = card;
+  // 반투명 처리
+  card.style.opacity = '0.5';
+  e.preventDefault();
+}, {passive:false});
+
+document.addEventListener('touchmove', e => {
+  if (!touchSakeDragId) return;
+  e.preventDefault();
+  const touch = e.touches[0];
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const targetCard = el?.closest('.sake-mgmt-card');
+  if (targetCard && targetCard !== touchSakeDragEl) {
+    targetCard.style.borderTop = '3px solid var(--gold)';
+  }
+  document.querySelectorAll('.sake-mgmt-card').forEach(c => {
+    if (c !== targetCard) c.style.borderTop = '';
+  });
+}, {passive:false});
+
+document.addEventListener('touchend', async e => {
+  if (!touchSakeDragId) return;
+  const touch = e.changedTouches[0];
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const targetCard = el?.closest('.sake-mgmt-card');
+  document.querySelectorAll('.sake-mgmt-card').forEach(c => {
+    c.style.opacity = '1';
+    c.style.borderTop = '';
+  });
+  if (targetCard) {
+    const targetId = targetCard.id.replace('sakecard-','');
+    if (targetId && targetId !== touchSakeDragId) {
+      const srcIdx = sakeItemsCache.findIndex(i=>i.id===touchSakeDragId);
+      const tgtIdx = sakeItemsCache.findIndex(i=>i.id===targetId);
+      if (srcIdx>=0 && tgtIdx>=0) {
+        const moved = sakeItemsCache.splice(srcIdx,1)[0];
+        sakeItemsCache.splice(tgtIdx,0,moved);
+        try {
+          const batch = writeBatch(db);
+          sakeItemsCache.forEach((item,i) => { batch.update(doc(db,'sake_items',item.id),{order:i}); item.order=i; });
+          await batch.commit();
+          refreshSakeSelect();
+        } catch(err) { console.error(err); }
+        renderSakePage();
+        showToast('순서 변경됨');
+      }
+    }
+  }
+  touchSakeDragId = null;
+  touchSakeDragEl = null;
+});
 
 
 window.renderHistory = () => {
@@ -1444,3 +1506,4 @@ document.getElementById('historyMonth').value = today().slice(0,7);
 addSakeRow();
 updateCumulativeDisplay();
 </script>
+
