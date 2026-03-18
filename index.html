@@ -803,7 +803,38 @@ window.saveEntry = async () => {
 
   try {
     setSyncStatus('spin', '저장중');
-    await setDoc(doc(db, 'sales', date), entry);
+
+    // 사케 재고 차감 계산
+    // 기존에 이 날짜로 저장된 사케 판매 기록이 있으면 먼저 복원(되돌리기) 후 새로 차감
+    const prevEntry = salesCache.find(d => d.date === date);
+    const prevSake = prevEntry?.sake || [];
+
+    // 재고 변경 맵 계산: {itemId: 차감량}
+    const stockDelta = {};
+
+    // 이전 기록 되돌리기 (+)
+    prevSake.forEach(s => {
+      if (s.id && s.qty) stockDelta[s.id] = (stockDelta[s.id]||0) + s.qty;
+    });
+    // 새 판매 차감 (-)
+    sake.forEach(s => {
+      if (s.id && s.qty) stockDelta[s.id] = (stockDelta[s.id]||0) - s.qty;
+    });
+
+    // writeBatch로 sales + sake_items 동시 저장
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'sales', date), entry);
+
+    // 재고 변경이 있는 품목만 업데이트
+    for (const [itemId, delta] of Object.entries(stockDelta)) {
+      if (delta === 0) continue;
+      const item = sakeItemsCache.find(s => s.id === itemId);
+      if (!item) continue;
+      const newStock = Math.max(0, (item.stock||0) + delta);
+      batch.update(doc(db, 'sake_items', itemId), { stock: newStock });
+    }
+
+    await batch.commit();
     setSyncStatus('ok', '동기화됨');
     showToast('저장됨: ' + date);
     document.getElementById('saveOk').style.display = 'block';
@@ -817,6 +848,7 @@ window.saveEntry = async () => {
     document.getElementById('sakeInputs').innerHTML='';
     document.getElementById('prepayInputs').innerHTML='<div class="sake-row-inp"><input type="number" class="prepay-amt" placeholder="금액 (예: -158000)"><input type="text" class="prepay-memo" placeholder="메모"><button class="btn-remove" onclick="this.parentElement.remove()">×</button></div>';
     addSakeRow();
+    updateCumulativeDisplay();
   } catch(e) { setSyncStatus('err','저장실패'); showToast('저장 실패: '+e.message); }
 };
 
