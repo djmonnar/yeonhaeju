@@ -680,15 +680,49 @@ window.updateCumulativeDisplay = () => {
 
 window.autoFloor = (changed) => {
   const total = parseInt(document.getElementById('inp_total').value)||0;
-  const f1 = parseInt(document.getElementById('inp_floor1').value)||0;
-  const f2 = parseInt(document.getElementById('inp_floor2').value)||0;
+  const f1raw = document.getElementById('inp_floor1').value;
+  const f2raw = document.getElementById('inp_floor2').value;
+  const f1 = parseInt(f1raw)||0;
+  const f2 = parseInt(f2raw)||0;
   if (!total) return;
+
   if (changed === 'floor1' && f1 > 0) {
+    // 1층 입력 → 2층 자동
     const calc = total - f1;
-    if (calc >= 0) { document.getElementById('inp_floor2').value = calc; document.getElementById('hint_floor2').textContent = '자동계산: ' + fmt(calc); }
+    if (calc >= 0) {
+      document.getElementById('inp_floor2').value = calc||'';
+      document.getElementById('hint_floor2').textContent = calc ? '자동계산: ' + fmt(calc) : '';
+    }
   } else if (changed === 'floor2' && f2 > 0) {
+    // 2층 입력 → 1층 자동
     const calc = total - f2;
-    if (calc >= 0) { document.getElementById('inp_floor1').value = calc; document.getElementById('hint_floor1').textContent = '자동계산: ' + fmt(calc); }
+    if (calc >= 0) {
+      document.getElementById('inp_floor1').value = calc||'';
+      document.getElementById('hint_floor1').textContent = calc ? '자동계산: ' + fmt(calc) : '';
+    }
+  } else if (changed === '' || changed === 'total') {
+    // 총매출만 바뀐 경우
+    if (!f1raw && !f2raw) {
+      // 둘 다 없음 → 1층 = 전체
+      document.getElementById('inp_floor1').value = total;
+      document.getElementById('hint_floor1').textContent = '자동계산: ' + fmt(total) + ' (전체)';
+      document.getElementById('inp_floor2').value = '';
+      document.getElementById('hint_floor2').textContent = '';
+    } else if (f2 > 0 && !f1raw) {
+      // 2층만 있음 → 1층 자동
+      const calc = total - f2;
+      if (calc >= 0) {
+        document.getElementById('inp_floor1').value = calc||'';
+        document.getElementById('hint_floor1').textContent = calc ? '자동계산: ' + fmt(calc) : '';
+      }
+    } else if (f1 > 0 && !f2raw) {
+      // 1층만 있음 → 2층 자동
+      const calc = total - f1;
+      if (calc >= 0) {
+        document.getElementById('inp_floor2').value = calc||'';
+        document.getElementById('hint_floor2').textContent = calc ? '자동계산: ' + fmt(calc) : '';
+      }
+    }
   }
 };
 
@@ -1406,8 +1440,8 @@ window.importTemplate = () => {
   document.getElementById('inp_lunch').value = lunch||'';
   document.getElementById('inp_dinner').value = dinner||'';
   document.getElementById('inp_cumulative').value = cumulative||'';
-  // 월 누적 디스플레이 업데이트
-  setTimeout(updateCumulativeDisplay, 100);
+  // 월 누적 + 층별 자동계산
+  setTimeout(() => { updateCumulativeDisplay(); autoFloor(''); }, 100);
 
   // 선결제 채우기
   if (prepay.length) {
