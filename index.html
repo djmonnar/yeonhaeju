@@ -510,7 +510,7 @@ let sakeItemsCache = [];
 
 // ── UTILS ──
 const fmt = n => { if (!n && n !== 0) return '—'; return (n < 0 ? '-' : '') + '₩' + Math.abs(Math.round(n)).toLocaleString(); };
-const fmtS = n => { if (!n && n !== 0) return '—'; const a = Math.abs(n); if (a >= 100000000) return (n/100000000).toFixed(1)+'억'; if (a >= 10000) return Math.round(n/10000)+'만'; return n.toLocaleString(); };
+const fmtS = n => { if (!n && n !== 0) return '—'; return (n < 0 ? '-' : '') + '₩' + Math.abs(n).toLocaleString(); };
 const today = () => new Date().toISOString().slice(0,10);
 const dayLabel = d => { const dt = new Date(d+'T00:00:00'); return ['일','월','화','수','목','금','토'][dt.getDay()]; };
 const showToast = m => { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); };
@@ -1380,10 +1380,28 @@ window.importTemplate = () => {
     for (const line of lines) {
       const l = line.replace(/\s/g,'');
       for (const kw of keywords) {
-        if (l.includes(kw.replace(/\s/g,''))) {
-          const m = l.match(/[-+]?[\d,]+/);
+        const kwClean = kw.replace(/\s/g,'');
+        if (l.includes(kwClean)) {
+          // 키워드 제거 후 남은 부분에서 숫자 찾기
+          const after = l.replace(kwClean, '');
+          const m = after.match(/[-+]?[\d,]{4,}/); // 최소 4자리 이상 숫자만 (1,2 같은 오파싱 방지)
           if (m) return parseInt(m[0].replace(/,/g,''));
+          return 0; // 키워드는 있는데 숫자가 없으면 0
         }
+      }
+    }
+    return 0;
+  };
+
+  // 층별은 별도 파싱 (금액 없으면 반드시 0 반환)
+  const parseFloor = (lines, keyword) => {
+    for (const line of lines) {
+      const l = line.replace(/\s/g,'');
+      if (l.includes(keyword.replace(/\s/g,''))) {
+        const after = l.replace(keyword.replace(/\s/g,''), '');
+        const m = after.match(/[\d,]{4,}/); // 4자리 이상 숫자만
+        if (m) return parseInt(m[0].replace(/,/g,''));
+        return 0; // 키워드만 있고 금액 없으면 0
       }
     }
     return 0;
@@ -1409,8 +1427,8 @@ window.importTemplate = () => {
   const transfer = findNum(lines,'계좌이체');
   const zeropay = findNum(lines,'제로페이');
   const cash = findNum(lines,'현금');
-  const floor1 = findNum(lines,'1층매출','1층');
-  const floor2 = findNum(lines,'2층매출','2층');
+  const floor1 = parseFloor(lines,'1층매출');
+  const floor2 = parseFloor(lines,'2층매출');
   const lunch = findNum(lines,'점심');
   const dinner = findNum(lines,'저녁');
   const cumulative = findNum(lines,'누적');
@@ -1440,8 +1458,13 @@ window.importTemplate = () => {
   document.getElementById('inp_lunch').value = lunch||'';
   document.getElementById('inp_dinner').value = dinner||'';
   document.getElementById('inp_cumulative').value = cumulative||'';
-  // 월 누적 + 층별 자동계산
-  setTimeout(() => { updateCumulativeDisplay(); autoFloor(''); }, 100);
+  // 월 누적 + 층별 자동계산 (floor1/2 파싱 후 총매출 기준으로 자동완성)
+  setTimeout(() => {
+    updateCumulativeDisplay();
+    // 2층이 없으면 → 1층 = 전체 자동
+    // 2층만 있으면 → 1층 = 전체 - 2층 자동
+    autoFloor('');
+  }, 150);
 
   // 선결제 채우기
   if (prepay.length) {
