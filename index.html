@@ -311,7 +311,7 @@ textarea{resize:none;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-w
       <div class="form-group"><label>특이사항</label><input type="text" id="inp_note" placeholder="연해주, 우천 등"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>총 매출</label><input type="number" id="inp_total" placeholder="0" oninput="onTotalChange()"></div>
+      <div class="form-group"><label>총 매출</label><input type="number" id="inp_total" placeholder="0" oninput="onTotalChange()" onblur="onTotalBlur()"></div>
       <div class="form-group">
         <label>월 누적 <span style="font-size:9px;color:var(--gold-dim);letter-spacing:.05em">(자동계산)</span></label>
         <div id="inp_cumulative_display" style="background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:13px;color:var(--gold);min-height:40px">계산 중...</div>
@@ -368,7 +368,8 @@ textarea{resize:none;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-w
     <div class="form-sec-title">📌 선결제</div>
     <div id="prepayInputs">
       <div class="sake-row-inp">
-        <input type="number" class="prepay-amt" placeholder="금액 (예: -158000)">
+        <input type="text" inputmode="numeric" class="prepay-amt" placeholder="금액 (예: 158000)">
+        <button type="button" class="prepay-sign-btn" onclick="togglePrepaySign(this)" style="background:var(--red);border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:700;padding:0 12px;cursor:pointer;flex-shrink:0;height:40px">−</button>
         <input type="text" class="prepay-memo" placeholder="메모">
         <button class="btn-remove" onclick="this.parentElement.remove()">×</button>
       </div>
@@ -662,7 +663,10 @@ window.saveTarget = () => {
 };
 
 // ── AUTO CALC ──
-window.onTotalChange = () => { checkDiff(); autoFloor(''); autoMeal(''); updateCumulativeDisplay(); };
+window.onTotalChange = () => { checkDiff(); autoMeal(''); updateCumulativeDisplay(); };
+
+// 총매출 입력 완료(포커스 벗어날 때)에만 층별 자동계산
+window.onTotalBlur = () => { autoFloor(''); };
 
 window.updateCumulativeDisplay = () => {
   const date = document.getElementById('inp_date').value;
@@ -783,7 +787,7 @@ window.addSakeRow = () => {
 window.addPrepayRow = () => {
   const div = document.createElement('div');
   div.className = 'sake-row-inp';
-  div.innerHTML = `<input type="number" class="prepay-amt" placeholder="금액 (예: -158000)"><input type="text" class="prepay-memo" placeholder="메모"><button class="btn-remove" onclick="this.parentElement.remove()">×</button>`;
+  div.innerHTML = `<input type="text" inputmode="numeric" class="prepay-amt" placeholder="금액 (예: 158000)"><button type="button" class="prepay-sign-btn" onclick="togglePrepaySign(this)" style="background:var(--red);border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:700;padding:0 12px;cursor:pointer;flex-shrink:0;height:40px">−</button><input type="text" class="prepay-memo" placeholder="메모"><button class="btn-remove" onclick="this.parentElement.remove()">×</button>`;
   document.getElementById('prepayInputs').appendChild(div);
 };
 
@@ -880,7 +884,7 @@ window.saveEntry = async () => {
     ['hint_floor1','hint_floor2','hint_lunch','hint_dinner'].forEach(id => document.getElementById(id).textContent='');
     document.getElementById('diffAlert').style.display='none';
     document.getElementById('sakeInputs').innerHTML='';
-    document.getElementById('prepayInputs').innerHTML='<div class="sake-row-inp"><input type="number" class="prepay-amt" placeholder="금액 (예: -158000)"><input type="text" class="prepay-memo" placeholder="메모"><button class="btn-remove" onclick="this.parentElement.remove()">×</button></div>';
+    document.getElementById('prepayInputs').innerHTML='<div class="sake-row-inp"><input type="text" inputmode="numeric" class="prepay-amt" placeholder="금액 (예: 158000)"><button type="button" class="prepay-sign-btn" onclick="togglePrepaySign(this)" style="background:var(--red);border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:700;padding:0 12px;cursor:pointer;flex-shrink:0;height:40px">−</button><input type="text" class="prepay-memo" placeholder="메모"><button class="btn-remove" onclick="this.parentElement.remove()">×</button></div>';
     addSakeRow();
     updateCumulativeDisplay();
   } catch(e) { setSyncStatus('err','저장실패'); showToast('저장 실패: '+e.message); }
@@ -1141,7 +1145,11 @@ function loadEntryToForm(entry) {
   } else { addSakeRow(); }
   // prepay
   if ((entry.prepay||[]).length) {
-    document.getElementById('prepayInputs').innerHTML=entry.prepay.map(p=>`<div class="sake-row-inp"><input type="number" class="prepay-amt" value="${p.amt}" placeholder="금액"><input type="text" class="prepay-memo" value="${p.memo||''}" placeholder="메모"><button class="btn-remove" onclick="this.parentElement.remove()">×</button></div>`).join('');
+    document.getElementById('prepayInputs').innerHTML=entry.prepay.map(p=>{
+      const isNeg = (p.amt||0) < 0;
+      const absAmt = Math.abs(p.amt||0);
+      return `<div class="sake-row-inp"><input type="text" inputmode="numeric" class="prepay-amt" value="${absAmt||''}" placeholder="금액"><button type="button" class="prepay-sign-btn" onclick="togglePrepaySign(this)" style="background:${isNeg?'var(--red)':'var(--green)'};border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:700;padding:0 12px;cursor:pointer;flex-shrink:0;height:40px">${isNeg?'−':'+'}</button><input type="text" class="prepay-memo" value="${p.memo||''}" placeholder="메모"><button class="btn-remove" onclick="this.parentElement.remove()">×</button></div>`;
+    }).join('');
   }
 }
 
@@ -1468,9 +1476,11 @@ window.importTemplate = () => {
 
   // 선결제 채우기
   if (prepay.length) {
-    document.getElementById('prepayInputs').innerHTML = prepay.map(p=>
-      `<div class="sake-row-inp"><input type="number" class="prepay-amt" value="${p.amt}" placeholder="금액"><input type="text" class="prepay-memo" value="" placeholder="메모"><button class="btn-remove" onclick="this.parentElement.remove()">×</button></div>`
-    ).join('');
+    document.getElementById('prepayInputs').innerHTML = prepay.map(p=>{
+      const isNeg = p.amt < 0;
+      const absAmt = Math.abs(p.amt);
+      return `<div class="sake-row-inp"><input type="text" inputmode="numeric" class="prepay-amt" value="${absAmt}" placeholder="금액"><button type="button" class="prepay-sign-btn" onclick="togglePrepaySign(this)" style="background:${isNeg?'var(--red)':'var(--green)'};border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:700;padding:0 12px;cursor:pointer;flex-shrink:0;height:40px">${isNeg?'−':'+'}</button><input type="text" class="prepay-memo" value="" placeholder="메모"><button class="btn-remove" onclick="this.parentElement.remove()">×</button></div>`;
+    }).join('');
   }
 
   // 차액 체크
